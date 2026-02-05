@@ -1,0 +1,2024 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>엑셀/CSV 플레이스홀더 제거기 (HTML 단일 파일, 배치 지원)</title>
+  <style>
+    :root { --bg:#0b0f14; --card:#121926; --text:#e6edf3; --muted:#9fb0c2; --line:#223041; --accent:#7aa2ff; --bad:#ff6b6b; --good:#5bd3a6; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 18px 80px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    h2 { font-size: 15px; margin: 16px 0 10px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.22); }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    input[type="file"], input[type="number"], select, textarea, input[type="text"] {
+      width: 100%; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--line);
+      background: #0e1522; color: var(--text); padding: 10px 12px; outline: none;
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .btnrow { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+    button {
+      border: 1px solid var(--line); background: #0e1522; color: var(--text);
+      padding: 10px 12px; border-radius: 12px; cursor: pointer; font-weight: 700;
+    }
+    button.primary { background: #1a2a4a; border-color: #2b3e64; }
+    button.danger { border-color: #5d2c2c; background:#1a1010; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .pill { display:inline-flex; gap:8px; align-items:center; padding: 6px 10px; border:1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; }
+    .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .divider { height: 1px; background: var(--line); margin: 14px 0; }
+    .hidden { display:none !important; }
+    .sheetbox { max-height: 210px; overflow:auto; padding: 10px; border-radius: 12px; border:1px solid var(--line); background:#0e1522; }
+    .sheetbox label { display:flex; gap:8px; align-items:center; margin: 8px 0; color: var(--text); font-size: 13px; }
+    table { width:100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 8px 8px; vertical-align: top; }
+    th { text-align: left; color: var(--muted); font-weight: 700; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; color: #cbd5e1; }
+    .tag { padding:2px 8px; border-radius: 999px; border:1px solid var(--line); font-size: 11px; color: var(--muted); display:inline-block; margin-right:6px; margin-bottom:4px; }
+    .ok { color: var(--good); }
+    .bad { color: var(--bad); }
+    details { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background:#0e1522; }
+    summary { cursor:pointer; font-weight:700; color: var(--text); }
+    .drop {
+      border: 1px dashed #2b3e64;
+      border-radius: 14px;
+      padding: 16px;
+      background: #0e1522;
+    }
+    .drop.dragover {
+      outline: 2px solid #2b3e64;
+      background: #101c30;
+    }
+    .filelist { max-height: 260px; overflow:auto; border-radius: 12px; border:1px solid var(--line); background:#0e1522; }
+    .fileitem { display:flex; justify-content: space-between; gap: 10px; align-items:center; padding: 10px 12px; border-bottom:1px solid var(--line); }
+    .fileitem:last-child { border-bottom:none; }
+    .filemeta { display:flex; flex-direction: column; gap: 4px; }
+    .filemeta b { font-size: 13px; }
+    .filemeta span { font-size: 12px; color: var(--muted); }
+    .mini { font-size: 12px; color: var(--muted); }
+    .kbd { border:1px solid var(--line); border-bottom-width:2px; border-radius:8px; padding:2px 6px; font-size: 11px; color: var(--muted); background:#0b1422; }
+    .right { display:flex; gap: 8px; align-items:center; }
+    .checkbox { display:flex; gap:8px; align-items:center; }
+    .badge { padding: 2px 8px; border: 1px solid var(--line); border-radius:999px; font-size:11px; color: var(--muted); }
+    .modalBack {
+      position:fixed; inset:0; background: rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; z-index: 1000;
+    }
+    .modal {
+      width:min(900px, 92vw); max-height: 85vh; overflow:auto;
+      background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+  
+    /* ===== 상단 GNB ===== */
+    .gnb{
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background: rgba(10,14,22,0.92);
+      backdrop-filter: blur(10px);
+    }
+    .gnb-inner{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .gnb-brand{
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: .2px;
+      color: rgba(233,238,247,0.95);
+      user-select: none;
+    }
+    .gnb-links{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .gnb a{
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 12px;
+      color: rgba(170,182,204,0.95);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+    }
+    .gnb a:hover{
+      color: rgba(233,238,247,0.95);
+      background: rgba(255,255,255,0.06);
+    }
+    .gnb a.active{
+      color: rgba(233,238,247,0.98);
+      border-color: rgba(124,198,255,0.45);
+      background: rgba(124,198,255,0.12);
+    }
+
+  </style>
+
+  <!-- CDN 라이브러리: 오프라인 사용 시 로컬로 교체 가능 -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+<nav class="gnb">
+  <div class="gnb-inner">
+    <div class="gnb-brand">TOOLS</div>
+    <div class="gnb-links">
+      <a href="review.html" data-page="review.html">번역 검수</a>
+      <a href="placeholder.html" data-page="placeholder.html">플레이스홀더 도구</a>
+    </div>
+  </div>
+</nav>
+<div class="wrap">
+  <h1>엑셀/CSV 플레이스홀더 제거기 (HTML 단일 파일, 배치 지원)</h1>
+
+  <div class="card">
+    <div class="muted">
+      이 도구는 <b>브라우저 안에서만</b> 동작합니다. 파일이 서버로 전송되지 않습니다.<br/>
+      삭제는 엑셀의 “찾기/바꾸기에서 바꿀 내용 공란”과 동일하게, <b>해당 문자열만 정확히 제거</b>합니다(대소문자 구분, 모든 위치 전부 제거).
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="grid">
+      <div>
+        <label>1) 파일 추가 (.xlsx, .csv) 여러 개 가능</label>
+        <div id="drop" class="drop">
+          <div class="row" style="justify-content: space-between;">
+            <div>
+              <b>드래그 앤 드롭</b>으로 파일을 넣거나, 아래 버튼으로 선택하세요.
+              <div class="mini" style="margin-top:6px;">
+                여러 파일을 한 번에 처리하는 경우, 결과는 <span class="kbd">ZIP</span> 1개로 다운로드됩니다(브라우저 다중 다운로드 차단을 피하기 위한 방식).
+              </div>
+            </div>
+            <div class="right">
+              <input id="file" type="file" accept=".xlsx,.csv" multiple class="hidden" />
+              <button id="btnPick" type="button">파일 선택</button>
+              <button id="btnClearFiles" type="button" class="danger" disabled>목록 비우기</button>
+            </div>
+          </div>
+          <div style="margin-top:12px;" class="filelist" id="fileList"></div>
+          <div class="mini" style="margin-top:10px;">
+            분석 후 각 파일의 최소 정보(파일명, 시트 수, 행 수, 텍스트 글자 수, 텍스트 셀 수)를 표시합니다.
+          </div>
+        </div>
+
+        <details style="margin-top:12px;">
+          <summary>제약과 불안정 요소(반드시 확인)</summary>
+          <div class="muted" style="margin-top:10px;">
+            <b class="bad">추가가 사실상 불가능하거나 지원하지 않는 것</b><br/>
+            - 암호 또는 암호화된 엑셀 파일(.xlsx) 처리<br/>
+            - .xls(구형 바이너리) 및 매크로(.xlsm) 완전 보존 보장<br/>
+            <br/>
+            <b class="bad">양(파일과 로그 크기)에 따라 불안정해질 수 있는 것</b><br/>
+            - 매우 큰 XLSX(시트, 셀, 텍스트가 많음)에서는 분석과 변환 자체가 느려지거나 브라우저 탭이 멈출 수 있습니다<br/>
+            - 리포트 “전체(원문 포함)”은 리포트 파일이 커져서 느려질 수 있습니다<br/>
+            <br/>
+            <b class="ok">원본 보존</b><br/>
+            - XLSX는 다시 생성하기보다 zip 내부에서 <b>시트 XML과 sharedStrings 텍스트 노드만 최소 수정</b>하는 방식이라 보존성이 높은 편입니다.<br/>
+            - 다만 엑셀의 모든 고급 요소를 항상 100% 보장한다고 단정할 수는 없습니다.
+          </div>
+        </details>
+      </div>
+
+      <div>
+        <label>2) 작업 방식</label>
+        <div class="row" style="gap:8px; margin-bottom:10px;">
+          <button id="tabRemove" type="button" class="primary">문자열 제거</button>
+          <button id="tabReplace" type="button">문자열 교체</button>
+          <span class="mini">둘 중 하나만 선택해서 사용합니다.</span>
+        </div>
+
+        <!-- Remove mode -->
+        <div id="panelRemove">
+          <label>제거할 문자열 목록 (한 줄에 1개, 대소문자 구분)</label>
+          <div class="row" style="justify-content: space-between; margin-bottom:8px;">
+            <div class="mini">줄바꿈이 포함된 문자열은 <span class="kbd">\n</span> 으로 입력하실 수 있습니다.</div>
+            <div class="right">
+              <button id="btnQuickT" type="button">퀵: «T:\n» 추가</button>
+              <button id="btnClearPH" type="button" class="danger">목록 비우기</button>
+            </div>
+          </div>
+          <textarea id="placeholders" placeholder="예: {{PLACEHOLDER}}\n예: [삭제할문구]\n예: «T:\n» (줄바꿈은 \n 로 입력)"></textarea>
+          <div class="muted" style="margin-top:8px;">
+            입력한 문자열을 그대로(리터럴) 제거합니다. 공백도 문자열의 일부로 취급합니다.
+          </div>
+        </div>
+
+        <!-- Replace mode -->
+        <div id="panelReplace" class="hidden">
+          <label>문자열 교체 규칙 (대소문자 구분)</label>
+          <div class="mini" style="margin-bottom:8px;">
+            왼쪽(찾을 문자열)과 오른쪽(바꿀 문자열)을 입력하면 모든 파일에 일괄 적용됩니다. 줄바꿈은 <span class="kbd">\n</span> 으로 입력하실 수 있습니다.
+          </div>
+
+          <div id="replaceRules" class="sheetbox" style="max-height: 260px;">
+            <!-- rows injected -->
+          </div>
+
+          <div class="row" style="justify-content: space-between; margin-top:10px;">
+            <div class="mini">규칙은 위에서 아래 순서대로 적용됩니다.</div>
+            <div class="right">
+              <button id="btnAddRule" type="button">규칙 추가</button>
+              <button id="btnClearRules" type="button" class="danger">규칙 비우기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="grid">
+      <div>
+        <h2>적용 범위(XLSX)</h2>
+        <div class="row">
+          <label class="pill"><input type="radio" name="sheetMode" value="all" checked> 전체 시트</label>
+          <label class="pill"><input type="radio" name="sheetMode" value="select"> 파일별 시트 선택</label>
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          “파일별 시트 선택”은 분석 후 각 파일에서 별도로 선택합니다.
+        </div>
+
+        <h2 style="margin-top:16px;">CSV 옵션</h2>
+        <div class="grid">
+          <div>
+            <label>인코딩</label>
+            <select id="csvEncoding">
+              <option value="auto" selected>자동(UTF-8 우선, 실패 시 EUC-KR)</option>
+              <option value="utf-8">UTF-8</option>
+              <option value="utf-8-sig">UTF-8(BOM)</option>
+              <option value="euc-kr">EUC-KR(CP949 계열)</option>
+            </select>
+          </div>
+          <div>
+            <label>구분자</label>
+            <select id="csvDelimiter">
+              <option value="auto" selected>자동 감지</option>
+              <option value=",">쉼표 (,)</option>
+              <option value=";">세미콜론 (;)</option>
+              <option value="\\t">탭 (Tab)</option>
+              <option value="|">파이프 (|)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2>리포트 및 결과 확인</h2>
+        <div class="row">
+          <label class="pill"><input id="reportEnabled" type="checkbox" checked> 변경 내역 리포트 생성</label>
+        </div>
+
+        <div class="grid" style="margin-top:10px;">
+          <div>
+            <label>리포트 형식</label>
+            <select id="reportFormat">
+              <option value="xlsx" selected>XLSX</option>
+              <option value="csv">CSV</option>
+            </select>
+          </div>
+          <div>
+            <label>리포트 내용</label>
+            <select id="reportDetail">
+              <option value="preview" selected>요약(미리보기)</option>
+              <option value="full">전체(원문 포함)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:10px;">
+          <div>
+            <label>리포트 미리보기 글자수(요약 모드)</label>
+            <input id="reportPreviewLimit" type="number" min="0" value="500" />
+          </div>
+          <div>
+            <label>결과창 표시 최대 건수</label>
+            <input id="uiPreviewRows" type="number" min="50" value="2000" />
+          </div>
+        </div>
+
+        <h2 style="margin-top:16px;">특이점 표시 규칙</h2>
+        <div class="row" style="gap:8px;">
+          <label class="pill"><input class="spRule" data-k="became_empty" type="checkbox" checked> 삭제 후 빈 문자열</label>
+          <label class="pill"><input class="spRule" data-k="whitespace_only" type="checkbox" checked> 삭제 후 공백만</label>
+          <label class="pill"><input class="spRule" data-k="double_space" type="checkbox" checked> 연속 공백</label>
+          <label class="pill"><input class="spRule" data-k="double_newline" type="checkbox" checked> 연속 줄바꿈</label>
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          자동 정리는 하지 않습니다. 검토 포인트만 표시합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="btnrow">
+      <button id="btnAnalyze" type="button" disabled>파일 분석</button>
+      <button id="btnProcess" class="primary" type="button" disabled>변환 실행</button>
+      <span id="status" class="muted"></span>
+    </div>
+  </div>
+
+  <div id="resultCard" class="card hidden" style="margin-top:16px;">
+    <h2>결과</h2>
+    <div id="summary" class="muted"></div>
+
+    <div class="divider"></div>
+
+    <div class="btnrow">
+      <button id="btnDownloadOut" type="button" class="primary" disabled>다운로드</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="row" style="gap:10px;">
+      <div style="flex:2;">
+        <label>필터(파일명, 시트, 셀, 문구 일부)</label>
+        <input id="filterText" type="text" placeholder="예: Sheet1 또는 A12 또는 {{PLACEHOLDER}}" />
+      </div>
+      <div style="flex:1;">
+        <label>특이점만 보기</label>
+        <select id="filterSpecial">
+          <option value="all" selected>전체</option>
+          <option value="only">특이점만</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:12px; overflow:auto;">
+      <table id="changesTable">
+        <thead>
+          <tr>
+            <th>파일</th>
+            <th>시트</th>
+            <th>셀</th>
+            <th>변경횟수</th>
+            <th>특이점</th>
+            <th>변경전(일부)</th>
+            <th>변경후(일부)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="muted" style="margin-top:10px;">
+      표에는 상위 N건만 표시됩니다. 전체 변경 내역은 ZIP 내부 리포트 파일로 확인하실 수 있습니다.
+    </div>
+  </div>
+
+</div>
+
+<div id="modalBack" class="modalBack hidden">
+  <div class="modal">
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <b id="modalTitle">시트 선택</b>
+        <div class="mini" id="modalHint" style="margin-top:6px;"></div>
+      </div>
+      <div class="right">
+        <button id="modalAll" type="button">전체 선택</button>
+        <button id="modalNone" type="button">전체 해제</button>
+        <button id="modalClose" type="button" class="primary">닫기</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="sheetbox" id="modalSheets"></div>
+  </div>
+</div>
+
+<script>
+/* -------------------------
+   Utilities and constants
+-------------------------- */
+const NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+const NS_REL  = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const XML_NS  = "http://www.w3.org/XML/1998/namespace";
+
+function $(id){ return document.getElementById(id); }
+function setStatus(msg){ $("status").textContent = msg || ""; }
+
+function escapeHtml(s){
+  return (s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+function formatBytes(n){
+  if(n == null) return "";
+  const units = ["B","KB","MB","GB"];
+  let i=0; let x = n;
+  while(x >= 1024 && i < units.length-1){ x /= 1024; i++; }
+  return `${x.toFixed(i===0?0:2)} ${units[i]}`;
+}
+function uniqKeepOrder(arr){
+  const seen = new Set();
+  const out = [];
+  for(const x of arr){
+    if(!seen.has(x)){
+      seen.add(x);
+      out.push(x);
+    }
+  }
+  return out;
+}
+function decodeEscapes(s){
+  // 사용 편의를 위해 \n, \r, \t, \\ 를 해석합니다.
+  // 원문에 실제 백슬래시가 필요하면 \\ 로 입력하세요.
+  if(s == null) return "";
+  return String(s)
+    .replaceAll("\\r\\n", "\r\n")
+    .replaceAll("\\n", "\n")
+    .replaceAll("\\r", "\r")
+    .replaceAll("\\t", "\t")
+    .replaceAll("\\\\", "\\");
+}
+function normalizePlaceholders(raw){
+  const lines = (raw || "").split(/\r?\n/);
+  const out = [];
+  for(const line of lines){
+    if(line === "") continue;
+    out.push(decodeEscapes(line));
+  }
+  return uniqKeepOrder(out);
+}
+function getMode(){
+  return document.body.dataset.mode || "remove";
+}
+function clipText(s, limit){
+  if(!s) return "";
+  if(limit <= 0) return "";
+  return s.length <= limit ? s : (s.slice(0, limit) + "…");
+}
+function buildOutName(originalName){
+  const dot = originalName.lastIndexOf(".");
+  if(dot < 0) return originalName + "_플레이스홀더제거";
+  const stem = originalName.slice(0, dot);
+  const ext  = originalName.slice(dot);
+  return stem + "_플레이스홀더제거" + ext;
+}
+function nowStamp(){
+  const d = new Date();
+  const p = (x)=>String(x).padStart(2,"0");
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+function flagsForText(afterText){
+  const t = afterText ?? "";
+  return {
+    became_empty: (t === ""),
+    whitespace_only: (t !== "" && t.trim() === ""),
+    double_space: (t.includes("  ")),
+    double_newline: (t.includes("\n\n") || t.includes("\r\n\r\n")),
+  };
+}
+function isSpecial(flags){
+  return !!(flags?.became_empty || flags?.whitespace_only || flags?.double_space || flags?.double_newline);
+}
+function getSheetMode(){
+  return [...document.querySelectorAll('input[name="sheetMode"]')].find(x=>x.checked)?.value || "all";
+}
+function getSpecialRules(){
+  const rules = {};
+  document.querySelectorAll('.spRule').forEach(el=>{
+    rules[el.dataset.k] = el.checked;
+  });
+  return rules;
+}
+function normalizeRulesFromUI(){
+  // returns array of {from,to,from_raw,to_raw} with escapes decoded
+  const rules = [];
+  document.querySelectorAll(".rrRow").forEach(row=>{
+    const fromRaw = row.querySelector(".rrFrom")?.value ?? "";
+    const toRaw   = row.querySelector(".rrTo")?.value ?? "";
+    if(fromRaw === "") return;
+    rules.push({
+      from_raw: fromRaw,
+      to_raw: toRaw,
+      from: decodeEscapes(fromRaw),
+      to: decodeEscapes(toRaw),
+    });
+  });
+  return rules;
+}
+
+
+/* -------------------------
+   File list (batch)
+-------------------------- */
+let files = []; // File[]
+let analyzedList = []; // [{id, file, type, meta...}]
+let lastResult = null; // {zipBlob, previewChanges, summaryText}
+
+function extOf(name){
+  const p = (name || "").split(".").pop().toLowerCase();
+  return p;
+}
+function isSupported(file){
+  const e = extOf(file.name);
+  return e === "xlsx" || e === "csv";
+}
+function addFiles(newFiles){
+  const added = [];
+  for(const f of newFiles){
+    if(!isSupported(f)) continue;
+    // dedupe by name+size+lastModified
+    const key = `${f.name}||${f.size}||${f.lastModified}`;
+    const exists = files.some(x => `${x.name}||${x.size}||${x.lastModified}` === key);
+    if(!exists){
+      files.push(f);
+      added.push(f);
+    }
+  }
+  renderFileList();
+  $("btnAnalyze").disabled = files.length === 0;
+  $("btnClearFiles").disabled = files.length === 0;
+  if(added.length){
+    setStatus(`${added.length}개 파일이 추가되었습니다.`);
+  }
+}
+function removeFileAt(idx){
+  files.splice(idx, 1);
+  renderFileList();
+  $("btnAnalyze").disabled = files.length === 0;
+  $("btnClearFiles").disabled = files.length === 0;
+}
+function clearFiles(){
+  files = [];
+  analyzedList = [];
+  lastResult = null;
+  $("resultCard").classList.add("hidden");
+  $("btnProcess").disabled = true;
+  $("btnAnalyze").disabled = true;
+  $("btnClearFiles").disabled = true;
+  setStatus("목록이 비워졌습니다.");
+  renderFileList();
+}
+
+function renderFileList(){
+  const box = $("fileList");
+  box.innerHTML = "";
+  if(files.length === 0){
+    box.innerHTML = `<div class="fileitem"><span class="mini">파일이 없습니다. 드래그 앤 드롭 또는 “파일 선택”을 사용하세요.</span></div>`;
+    return;
+  }
+  files.forEach((f, idx) => {
+    const item = document.createElement("div");
+    item.className = "fileitem";
+    const tags = [];
+    tags.push(`<span class="badge">${escapeHtml(extOf(f.name).toUpperCase())}</span>`);
+    tags.push(`<span class="badge">${escapeHtml(formatBytes(f.size))}</span>`);
+    item.innerHTML = `
+      <div class="filemeta">
+        <b>${escapeHtml(f.name)}</b>
+        <span>${tags.join(" ")} <span class="mini">마지막 수정: ${new Date(f.lastModified).toLocaleString()}</span></span>
+      </div>
+      <div class="right">
+        <button type="button" class="danger" data-rm="${idx}">삭제</button>
+      </div>
+    `;
+    box.appendChild(item);
+  });
+  box.querySelectorAll("button[data-rm]").forEach(btn=>{
+    btn.addEventListener("click", ()=>removeFileAt(parseInt(btn.dataset.rm, 10)));
+  });
+}
+
+/* -------------------------
+   XLSX analyze and engine (minimal-change)
+-------------------------- */
+function parseXml(xmlText){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, "application/xml");
+  const parseErr = doc.getElementsByTagName("parsererror")[0];
+  if(parseErr){
+    throw new Error("XML 파싱 오류");
+  }
+  return doc;
+}
+function serializeXml(doc){
+  const ser = new XMLSerializer();
+  const xml = ser.serializeToString(doc);
+  if(!xml.startsWith("<?xml")){
+    return `<?xml version="1.0" encoding="UTF-8"?>\n` + xml;
+  }
+  return xml;
+}
+function getTNodes(container){
+  return Array.from(container.getElementsByTagNameNS(NS_MAIN, "t"));
+}
+function setXmlSpacePreserveIfNeeded(tNode){
+  const txt = tNode.textContent ?? "";
+  const need = txt.startsWith(" ") || txt.endsWith(" ") || txt.includes("\n") || txt.includes("\r") || txt.includes("\t");
+  if(need){
+    tNode.setAttributeNS(XML_NS, "xml:space", "preserve");
+  }
+}
+function removeAcrossTNodes(tNodes, placeholders){
+  const before = tNodes.map(n => n.textContent ?? "").join("");
+  let changedAny = false;
+  const removedDetail = {};
+
+  for(const ph of placeholders){
+    if(!ph) continue;
+    let cnt = 0;
+    while(true){
+      const texts = tNodes.map(n => n.textContent ?? "");
+      const full = texts.join("");
+      const idx = full.indexOf(ph);
+      if(idx < 0) break;
+      cnt += 1;
+
+      const start = idx;
+      const end = idx + ph.length;
+
+      let pos = 0;
+      const newTexts = [];
+      for(const text of texts){
+        const nodeStart = pos;
+        const nodeEnd = pos + text.length;
+
+        if(nodeEnd <= start || nodeStart >= end){
+          newTexts.push(text);
+        } else {
+          const relStart = Math.max(start, nodeStart) - nodeStart;
+          const relEnd   = Math.min(end, nodeEnd) - nodeStart;
+          newTexts.push(text.slice(0, relStart) + text.slice(relEnd));
+        }
+        pos = nodeEnd;
+      }
+
+      for(let i=0;i<tNodes.length;i++){
+        if((tNodes[i].textContent ?? "") !== newTexts[i]){
+          tNodes[i].textContent = newTexts[i];
+          changedAny = true;
+        }
+      }
+    }
+    if(cnt){
+      removedDetail[ph] = cnt;
+    }
+  }
+  const after = tNodes.map(n => n.textContent ?? "").join("");
+  return { changed: changedAny && (before !== after), removedDetail, before, after };
+}
+function findNodePos(texts, absPos){
+  let pos = 0;
+  for(let i=0;i<texts.length;i++){
+    const t = texts[i] ?? "";
+    const next = pos + t.length;
+    if(absPos <= next){
+      return { idx: i, offset: absPos - pos };
+    }
+    pos = next;
+  }
+  return { idx: Math.max(0, texts.length - 1), offset: (texts[texts.length-1] ?? "").length };
+}
+function spliceAcrossTexts(texts, start, end, insertStr){
+  // Delete [start,end) then insert insertStr at start.
+  const a = findNodePos(texts, start);
+  const b = findNodePos(texts, end);
+
+  if(a.idx === b.idx){
+    const t = texts[a.idx] ?? "";
+    texts[a.idx] = t.slice(0, a.offset) + insertStr + t.slice(b.offset);
+    return texts;
+  }
+
+  const tA = texts[a.idx] ?? "";
+  texts[a.idx] = tA.slice(0, a.offset) + insertStr;
+
+  for(let i=a.idx+1; i<b.idx; i++) texts[i] = "";
+
+  const tB = texts[b.idx] ?? "";
+  texts[b.idx] = tB.slice(b.offset);
+  return texts;
+}
+function applyReplaceAcrossTNodes(tNodes, rules){
+  // rules: [{from,to,from_raw,to_raw}...] applied in order; literal, case-sensitive
+  const texts0 = tNodes.map(n => n.textContent ?? "");
+  let texts = texts0.slice();
+
+  const before = texts.join("");
+  let changedAny = false;
+  const detail = {};
+
+  for(const rule of rules){
+    const from = rule.from ?? "";
+    const to = rule.to ?? "";
+    if(!from) continue;
+
+    let cnt = 0;
+    while(true){
+      const full = texts.join("");
+      const idx = full.indexOf(from);
+      if(idx < 0) break;
+      cnt += 1;
+      texts = spliceAcrossTexts(texts, idx, idx + from.length, to);
+      changedAny = true;
+    }
+    if(cnt){
+      const key = `${rule.from_raw}→${rule.to_raw}`;
+      detail[key] = (detail[key] || 0) + cnt;
+    }
+  }
+
+  for(let i=0;i<tNodes.length;i++){
+    if((tNodes[i].textContent ?? "") !== texts[i]){
+      tNodes[i].textContent = texts[i];
+    }
+  }
+  const after = texts.join("");
+  return { changed: changedAny && (before !== after), detail, before, after };
+}
+
+function formatRemovedDetail(detail){
+  const entries = Object.entries(detail || {});
+  if(!entries.length) return { str:"", total:0 };
+  let total = 0;
+  const parts = entries.map(([k,v]) => { total += v; return `${k}:${v}`; });
+  return { str: parts.join(" | "), total };
+}
+function splitCellRef(cellRef){
+  const m = /^([A-Za-z]+)(\d+)$/.exec(cellRef || "");
+  if(!m) return { row:null, col:null };
+  const colLetters = m[1];
+  const row = parseInt(m[2], 10);
+  let col = 0;
+  for(const ch of colLetters.toUpperCase()){
+    col = col * 26 + (ch.charCodeAt(0) - 64);
+  }
+  return { row, col };
+}
+
+async function analyzeXlsxBasics(file){
+  const buf = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(buf);
+
+  const wbXml = await zip.file("xl/workbook.xml")?.async("text");
+  const relXml = await zip.file("xl/_rels/workbook.xml.rels")?.async("text");
+  if(!wbXml || !relXml) throw new Error("XLSX 구조를 읽지 못했습니다.");
+
+  const wbDoc = parseXml(wbXml);
+  const relDoc = parseXml(relXml);
+
+  const rels = Array.from(relDoc.getElementsByTagNameNS("*", "Relationship"));
+  const ridToTarget = {};
+  for(const r of rels){
+    const id = r.getAttribute("Id");
+    const target = r.getAttribute("Target");
+    if(id && target){
+      ridToTarget[id] = "xl/" + target.replace(/^\/+/, "");
+    }
+  }
+
+  const sheetElems = Array.from(wbDoc.getElementsByTagNameNS(NS_MAIN, "sheet"));
+  const sheetNames = [];
+  const sheetNameToPath = {};
+  for(const sh of sheetElems){
+    const name = sh.getAttribute("name");
+    const rid  = sh.getAttributeNS(NS_REL, "id");
+    if(name && rid && ridToTarget[rid]){
+      sheetNames.push(name);
+      sheetNameToPath[name] = ridToTarget[rid];
+    }
+  }
+
+  return { buf, zip, sheetNames, sheetNameToPath, hasSharedStrings: !!zip.file("xl/sharedStrings.xml") };
+}
+
+async function computeXlsxStats(file){
+  // 최소 정보: 시트 수, 데이터 행 수(중복 제외), 텍스트 셀 수, 텍스트 글자 수(합)
+  // 수식 셀은 제외, 문자열만 포함(s, inlineStr, str)
+  const x = await analyzeXlsxBasics(file);
+  const { zip, sheetNames, sheetNameToPath } = x;
+
+  // sharedStrings map idx -> string length
+  let ssLens = null;
+  if(zip.file("xl/sharedStrings.xml")){
+    const ssXml = await zip.file("xl/sharedStrings.xml").async("text");
+    const ssDoc = parseXml(ssXml);
+    const sis = Array.from(ssDoc.getElementsByTagNameNS(NS_MAIN, "si"));
+    ssLens = new Array(sis.length);
+    for(let i=0;i<sis.length;i++){
+      const tNodes = getTNodes(sis[i]);
+      const s = tNodes.map(n=>n.textContent ?? "").join("");
+      ssLens[i] = s.length;
+    }
+  }
+
+  let totalTextCells = 0;
+  let totalTextChars = 0;
+  let totalRowsWithData = new Set(); // global unique rows (across sheets) does not make sense; we will compute per sheet and sum unique per sheet
+  let perSheet = {};
+
+  for(const sName of sheetNames){
+    const wsPath = sheetNameToPath[sName];
+    const wsFile = zip.file(wsPath);
+    if(!wsFile) continue;
+    const wsXml = await wsFile.async("text");
+    const wsDoc = parseXml(wsXml);
+    const cells = Array.from(wsDoc.getElementsByTagNameNS(NS_MAIN, "c"));
+
+    const rowsWithData = new Set();
+    let textCells = 0;
+    let textChars = 0;
+
+    for(const c of cells){
+      const fNodes = c.getElementsByTagNameNS(NS_MAIN, "f");
+      if(fNodes && fNodes.length) continue;
+
+      const ref = c.getAttribute("r") || "";
+      const { row } = splitCellRef(ref);
+
+      const tAttr = c.getAttribute("t");
+      if(tAttr === "s"){
+        const vNode = c.getElementsByTagNameNS(NS_MAIN, "v")[0];
+        if(!vNode || vNode.textContent == null) continue;
+        const idx = parseInt(vNode.textContent, 10);
+        if(Number.isNaN(idx)) continue;
+        const len = (ssLens && idx >=0 && idx < ssLens.length) ? ssLens[idx] : null;
+        if(len == null) continue;
+        textCells += 1;
+        textChars += len;
+        if(row != null) rowsWithData.add(row);
+      } else if(tAttr === "inlineStr"){
+        const isNode = c.getElementsByTagNameNS(NS_MAIN, "is")[0];
+        if(!isNode) continue;
+        const tNodes = getTNodes(isNode);
+        if(!tNodes.length) continue;
+        const joined = tNodes.map(n => n.textContent ?? "").join("");
+        textCells += 1;
+        textChars += joined.length;
+        if(row != null) rowsWithData.add(row);
+      } else if(tAttr === "str"){
+        const vNode = c.getElementsByTagNameNS(NS_MAIN, "v")[0];
+        if(!vNode) continue;
+        const joined = vNode.textContent ?? "";
+        textCells += 1;
+        textChars += joined.length;
+        if(row != null) rowsWithData.add(row);
+      } else {
+        // numeric or empty: ignore
+      }
+    }
+
+    perSheet[sName] = {
+      rows_with_data: rowsWithData.size,
+      text_cells: textCells,
+      text_chars: textChars,
+    };
+    totalTextCells += textCells;
+    totalTextChars += textChars;
+    // "행수"는 시트별 의미가 일반적이라, 합계는 시트별 합으로 제공
+  }
+
+  const totalRowsSum = Object.values(perSheet).reduce((a, v)=>a + (v.rows_with_data || 0), 0);
+
+  return {
+    sheet_count: sheetNames.length,
+    sheet_names: sheetNames,
+    per_sheet: perSheet,
+    rows_sum: totalRowsSum,
+    text_cells: totalTextCells,
+    text_chars: totalTextChars,
+  };
+}
+
+async function analyzeCsv(file){
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+
+  function tryDecode(enc){
+    try{
+      const dec = new TextDecoder(enc, { fatal: true });
+      return dec.decode(bytes);
+    }catch(e){
+      return null;
+    }
+  }
+
+  let guessEnc = "utf-8";
+  let text = tryDecode("utf-8") || tryDecode("utf-8-sig");
+  if(!text){
+    text = tryDecode("euc-kr");
+    guessEnc = text ? "euc-kr" : "utf-8";
+  } else {
+    guessEnc = "utf-8";
+  }
+  if(!text) text = new TextDecoder("utf-8").decode(bytes);
+
+  // delimiter guess
+  let guessDelim = ",";
+  const sample = text.slice(0, 4096);
+  const candidates = [",",";","\t","|"];
+  let best = { d:",", c:0 };
+  for(const d of candidates){
+    const c = (sample.split(d).length - 1);
+    if(c > best.c){ best = { d, c }; }
+  }
+  guessDelim = best.d;
+
+  // minimal stats
+  let rows = [];
+  if(window.Papa){
+    const res = Papa.parse(text, { delimiter: guessDelim, skipEmptyLines: false });
+    rows = res.data || [];
+  } else {
+    rows = text.split(/\r?\n/).map(line => line.split(guessDelim));
+  }
+  let textChars = 0;
+  let textCells = 0;
+  for(const r of rows){
+    if(!Array.isArray(r)) continue;
+    for(const v of r){
+      const s = String(v ?? "");
+      if(s.length){
+        textCells += 1;
+        textChars += s.length;
+      }
+    }
+  }
+
+  return {
+    bytes,
+    text,
+    guess_encoding: guessEnc,
+    guess_delimiter: guessDelim,
+    rows: rows.length,
+    text_cells: textCells,
+    text_chars: textChars,
+  };
+}
+
+/* -------------------------
+   XLSX/CSV processing (same as previous, batch friendly)
+-------------------------- */
+async function processXlsx(file, options, perFileSheetSelection){
+  const meta = await analyzeXlsxBasics(file);
+  const { zip, sheetNames, sheetNameToPath } = meta;
+
+  const mode = options.mode || "remove";
+  const placeholders = options.placeholders || [];
+  const rules = options.rules || [];
+  const sheetMode = options.sheetMode;
+  const selectedSheets = (sheetMode === "all") ? sheetNames.slice() : (perFileSheetSelection || []).filter(s => sheetNameToPath[s]);
+  const selectedPaths = new Set(selectedSheets.map(s => sheetNameToPath[s]));
+  const allPaths = new Set(sheetNames.map(s => sheetNameToPath[s]));
+  const globalMode = (selectedPaths.size === allPaths.size);
+
+  const reportEnabled = options.reportEnabled;
+  const reportFormat = options.reportFormat;
+  const reportDetail = options.reportDetail;
+  const reportPreviewLimit = options.reportPreviewLimit;
+  const uiPreviewRows = options.uiPreviewRows;
+  const specialRules = options.specialRules;
+
+  // sharedStrings load
+  let ssDoc = null;
+  let ssList = [];
+  if(zip.file("xl/sharedStrings.xml")){
+    const ssXml = await zip.file("xl/sharedStrings.xml").async("text");
+    ssDoc = parseXml(ssXml);
+    ssList = Array.from(ssDoc.getElementsByTagNameNS(NS_MAIN, "si"));
+  }
+
+  const reportRows = [];
+  const previewRows = [];
+  const perSheetChanged = {};
+  const perRuleTotal = {};
+  if(mode === "remove"){
+    for(const ph of placeholders){ perRuleTotal[ph] = 0; }
+  } else {
+    for(const r of rules){ if(r && r.from_raw !== ""){ perRuleTotal[`${r.from_raw}→${r.to_raw}`] = 0; } }
+  }
+  const specialCounts = { became_empty:0, whitespace_only:0, double_space:0, double_newline:0 };
+  let changedCells = 0;
+  let removedTotal = 0;
+
+  function countSpecial(flags){
+    for(const k of Object.keys(specialCounts)){
+      if(specialRules[k] && flags[k]) specialCounts[k]++;
+    }
+  }
+  function pushPreview(rowObj){
+    if(previewRows.length < uiPreviewRows){
+      previewRows.push(rowObj);
+    }
+  }
+  function writeRow(sheet, cell, beforeText, afterText, removedDetailStr, removedCnt, flags){
+    const { row, col } = splitCellRef(cell);
+    const beforePreview = (reportDetail === "full") ? beforeText : clipText(beforeText, reportPreviewLimit);
+    const afterPreview  = (reportDetail === "full") ? afterText  : clipText(afterText, reportPreviewLimit);
+
+    reportRows.push([
+      "XLSX", sheet, cell, row, col,
+      beforeText.length, afterText.length,
+      removedDetailStr, removedCnt,
+      !!flags.became_empty, !!flags.whitespace_only, !!flags.double_space, !!flags.double_newline,
+      beforePreview, afterPreview
+    ]);
+
+    pushPreview({
+      sheet, cell, row, col,
+      removed_detail: removedDetailStr,
+      removed_total: removedCnt,
+      flags,
+      before_preview: clipText(beforeText, 200),
+      after_preview: clipText(afterText, 200),
+    });
+  }
+
+  const ssChangeMap = new Map();
+  if(globalMode && ssDoc && ssList.length){
+    for(let idx=0; idx<ssList.length; idx++){
+      const si = ssList[idx];
+      const tNodes = getTNodes(si);
+      if(!tNodes.length) continue;
+
+      const joined = tNodes.map(n => n.textContent ?? "").join("");
+      let hasAny = false;
+      if(mode === "remove"){
+        for(const ph of placeholders){ if(ph && joined.includes(ph)) { hasAny=true; break; } }
+      } else {
+        for(const r of rules){ if(r && r.from && joined.includes(r.from)) { hasAny=true; break; } }
+      }
+      if(!hasAny) continue;
+
+      const res = (mode === "remove") ? removeAcrossTNodes(tNodes, placeholders) : applyReplaceAcrossTNodes(tNodes, rules);
+      if(res.changed){
+        for(const t of tNodes) setXmlSpacePreserveIfNeeded(t);
+        const flags = flagsForText(res.after);
+        const detail = (mode === "remove") ? res.removedDetail : res.detail;
+        ssChangeMap.set(idx, { before: res.before, after: res.after, detail, flags });
+      }
+    }
+    if(ssChangeMap.size){
+      zip.file("xl/sharedStrings.xml", serializeXml(ssDoc));
+    }
+  }
+
+  const ssCache = new Map();
+  let newRefs = 0;
+
+  function appendSharedString(siElem){
+    const sst = ssDoc.documentElement;
+    sst.appendChild(siElem);
+    ssList.push(siElem);
+    return ssList.length - 1;
+  }
+  function updateSharedStringsCounts(){
+    if(!ssDoc) return;
+    const sst = ssDoc.documentElement;
+    if(sst.hasAttribute("uniqueCount")){
+      sst.setAttribute("uniqueCount", String(ssList.length));
+    }
+    if(sst.hasAttribute("count")){
+      const old = parseInt(sst.getAttribute("count") || String(ssList.length), 10);
+      if(!Number.isNaN(old)){
+        sst.setAttribute("count", String(old + newRefs));
+      }
+    }
+  }
+
+  for(const sheetName of selectedSheets){
+    const wsPath = sheetNameToPath[sheetName];
+    const wsFile = zip.file(wsPath);
+    if(!wsFile) continue;
+
+    const wsXml = await wsFile.async("text");
+    const wsDoc = parseXml(wsXml);
+
+    const cells = Array.from(wsDoc.getElementsByTagNameNS(NS_MAIN, "c"));
+    let modified = false;
+
+    for(const c of cells){
+      const cellRef = c.getAttribute("r") || "";
+      const fNodes = c.getElementsByTagNameNS(NS_MAIN, "f");
+      if(fNodes && fNodes.length) continue;
+
+      const tAttr = c.getAttribute("t");
+      if(tAttr === "s"){
+        const vNode = c.getElementsByTagNameNS(NS_MAIN, "v")[0];
+        if(!vNode || vNode.textContent == null) continue;
+        const origIdx = parseInt(vNode.textContent, 10);
+        if(Number.isNaN(origIdx)) continue;
+        if(!ssDoc || origIdx < 0 || origIdx >= ssList.length) continue;
+
+        if(globalMode){
+          const ch = ssChangeMap.get(origIdx);
+          if(!ch) continue;
+          const { before, after, detail, flags } = ch;
+          if(before === after) continue;
+
+          const { str, total } = formatRemovedDetail(detail);
+          changedCells += 1;
+          removedTotal += total;
+          perSheetChanged[sheetName] = (perSheetChanged[sheetName] || 0) + 1;
+          for(const [k, cnt] of Object.entries(detail)){
+            perRuleTotal[k] = (perRuleTotal[k] || 0) + cnt;
+          }
+          countSpecial(flags);
+          writeRow(sheetName, cellRef, before, after, str, total, flags);
+
+        } else {
+          const siOrig = ssList[origIdx];
+          const tNodesOrig = getTNodes(siOrig);
+          if(!tNodesOrig.length) continue;
+          const joined = tNodesOrig.map(n => n.textContent ?? "").join("");
+          let hasAny = false;
+          if(mode === "remove"){
+            for(const ph of placeholders){ if(ph && joined.includes(ph)) { hasAny=true; break; } }
+          } else {
+            for(const r of rules){ if(r && r.from && joined.includes(r.from)) { hasAny=true; break; } }
+          }
+          if(!hasAny) continue;
+
+          const siNew = siOrig.cloneNode(true);
+          const tNodesNew = getTNodes(siNew);
+          const res = (mode === "remove") ? removeAcrossTNodes(tNodesNew, placeholders) : applyReplaceAcrossTNodes(tNodesNew, rules);
+          if(!res.changed) continue;
+          for(const t of tNodesNew) setXmlSpacePreserveIfNeeded(t);
+
+          const afterText = res.after;
+          const cacheKey = `${origIdx}||${afterText}`;
+          let newIdx = null;
+          if(ssCache.has(cacheKey)){
+            newIdx = ssCache.get(cacheKey);
+          } else {
+            newIdx = appendSharedString(siNew);
+            ssCache.set(cacheKey, newIdx);
+          }
+          vNode.textContent = String(newIdx);
+          newRefs += 1;
+          modified = true;
+
+          const flags = flagsForText(afterText);
+          const detail = (mode === "remove") ? res.removedDetail : res.detail;
+          const { str, total } = formatRemovedDetail(detail);
+
+          changedCells += 1;
+          removedTotal += total;
+          perSheetChanged[sheetName] = (perSheetChanged[sheetName] || 0) + 1;
+          for(const [k, cnt] of Object.entries(detail)){
+            perRuleTotal[k] = (perRuleTotal[k] || 0) + cnt;
+          }
+          countSpecial(flags);
+          writeRow(sheetName, cellRef, res.before, res.after, str, total, flags);
+        }
+
+      } else if(tAttr === "inlineStr"){
+        const isNode = c.getElementsByTagNameNS(NS_MAIN, "is")[0];
+        if(!isNode) continue;
+        const tNodes = getTNodes(isNode);
+        if(!tNodes.length) continue;
+        const joined = tNodes.map(n => n.textContent ?? "").join("");
+        let hasAny = false;
+        if(mode === "remove"){
+          for(const ph of placeholders){ if(ph && joined.includes(ph)) { hasAny=true; break; } }
+        } else {
+          for(const r of rules){ if(r && r.from && joined.includes(r.from)) { hasAny=true; break; } }
+        }
+        if(!hasAny) continue;
+
+        const res = (mode === "remove") ? removeAcrossTNodes(tNodes, placeholders) : applyReplaceAcrossTNodes(tNodes, rules);
+        if(!res.changed) continue;
+        for(const t of tNodes) setXmlSpacePreserveIfNeeded(t);
+        modified = true;
+
+        const flags = flagsForText(res.after);
+        const detail = (mode === "remove") ? res.removedDetail : res.detail;
+        const { str, total } = formatRemovedDetail(detail);
+
+        changedCells += 1;
+        removedTotal += total;
+        perSheetChanged[sheetName] = (perSheetChanged[sheetName] || 0) + 1;
+        for(const [k, cnt] of Object.entries(detail)){
+          perRuleTotal[k] = (perRuleTotal[k] || 0) + cnt;
+        }
+        countSpecial(flags);
+        writeRow(sheetName, cellRef, res.before, res.after, str, total, flags);
+
+      } else if(tAttr === "str"){
+        const vNode = c.getElementsByTagNameNS(NS_MAIN, "v")[0];
+        if(!vNode) continue;
+        const before = vNode.textContent ?? "";
+
+        if(mode === "remove"){
+          let hasAny = false;
+          for(const ph of placeholders){ if(ph && before.includes(ph)) { hasAny=true; break; } }
+          if(!hasAny) continue;
+
+          let after = before;
+          const detail = {};
+          for(const ph of placeholders){
+            if(!ph) continue;
+            const cnt = after.split(ph).length - 1;
+            if(cnt > 0){
+              detail[ph] = cnt;
+              after = after.split(ph).join("");
+            }
+          }
+          if(after === before) continue;
+
+          vNode.textContent = after;
+          modified = true;
+
+          const flags = flagsForText(after);
+          const { str, total } = formatRemovedDetail(detail);
+
+          changedCells += 1;
+          removedTotal += total;
+          perSheetChanged[sheetName] = (perSheetChanged[sheetName] || 0) + 1;
+          for(const [k, cnt] of Object.entries(detail)){
+            perRuleTotal[k] = (perRuleTotal[k] || 0) + cnt;
+          }
+          countSpecial(flags);
+          writeRow(sheetName, cellRef, before, after, str, total, flags);
+
+        } else {
+          let hasAny = false;
+          for(const r of rules){ if(r && r.from && before.includes(r.from)) { hasAny=true; break; } }
+          if(!hasAny) continue;
+
+          let after = before;
+          const detail = {};
+          for(const r of rules){
+            if(!r || !r.from) continue;
+            const cnt = after.split(r.from).length - 1;
+            if(cnt > 0){
+              const key = `${r.from_raw}→${r.to_raw}`;
+              detail[key] = (detail[key] || 0) + cnt;
+              after = after.split(r.from).join(r.to);
+            }
+          }
+          if(after === before) continue;
+
+          vNode.textContent = after;
+          modified = true;
+
+          const flags = flagsForText(after);
+          const { str, total } = formatRemovedDetail(detail);
+
+          changedCells += 1;
+          removedTotal += total;
+          perSheetChanged[sheetName] = (perSheetChanged[sheetName] || 0) + 1;
+          for(const [k, cnt] of Object.entries(detail)){
+            perRuleTotal[k] = (perRuleTotal[k] || 0) + cnt;
+          }
+          countSpecial(flags);
+          writeRow(sheetName, cellRef, before, after, str, total, flags);
+        }
+      }
+    }
+
+    if(!globalMode && ssDoc && newRefs > 0){
+      updateSharedStringsCounts();
+      zip.file("xl/sharedStrings.xml", serializeXml(ssDoc));
+    }
+    if(modified){
+      zip.file(wsPath, serializeXml(wsDoc));
+    }
+  }
+
+  const summary = {
+    file_type: "xlsx",
+    sheets_selected: selectedSheets,
+    changed_cells: changedCells,
+    changed_total: removedTotal,
+    per_sheet_changed: perSheetChanged,
+    per_rule_total: Object.fromEntries(Object.entries(perRuleTotal).filter(([k,v])=>v)),
+    special_counts: Object.fromEntries(Object.entries(specialCounts).filter(([k,v])=>v)),
+  };
+
+  const outBlob = await zip.generateAsync({ type: "blob" });
+
+  let reportBlob = null;
+  if(reportEnabled){
+    const header = [
+      "파일유형","시트","셀","행","열","변경전길이","변경후길이",
+      "변경상세","변경총횟수",
+      "특이점_빈문자열","특이점_공백만","특이점_연속공백","특이점_연속줄바꿈",
+      "변경전미리보기","변경후미리보기"
+    ];
+    const aoa = [header, ...reportRows];
+
+    if(reportFormat === "csv"){
+      const csv = (window.Papa && Papa.unparse) ? Papa.unparse(aoa) : aoa.map(r => r.map(x => `"${String(x ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+      reportBlob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    } else {
+      if(!window.XLSX){
+        const csv = (window.Papa && Papa.unparse) ? Papa.unparse(aoa) : aoa.map(r => r.map(x => `"${String(x ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+        reportBlob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      } else {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, ws, "변경내역");
+        const arr = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        reportBlob = new Blob([arr], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      }
+    }
+  }
+
+  return { outBlob, reportBlob, summary, previewRows };
+}
+
+async function processCsv(file, options){
+  const meta = await analyzeCsv(file);
+
+  const mode = options.mode || "remove";
+  const placeholders = options.placeholders || [];
+  const rules = options.rules || [];
+  const reportEnabled = options.reportEnabled;
+  const reportFormat = options.reportFormat;
+  const reportDetail = options.reportDetail;
+  const reportPreviewLimit = options.reportPreviewLimit;
+  const uiPreviewRows = options.uiPreviewRows;
+  const specialRules = options.specialRules;
+
+  const encSel = options.csvEncoding;
+  const delimSel = options.csvDelimiter;
+
+  const bytes = meta.bytes;
+  function decode(enc){
+    try{
+      const dec = new TextDecoder(enc, { fatal: false });
+      return dec.decode(bytes);
+    }catch(e){
+      return new TextDecoder("utf-8").decode(bytes);
+    }
+  }
+  let text = meta.text;
+  if(encSel !== "auto"){
+    text = decode(encSel === "utf-8-sig" ? "utf-8" : encSel);
+  }
+
+  const delimiter = (delimSel === "auto") ? meta.guess_delimiter : (delimSel === "\\t" ? "\t" : delimSel);
+
+  let rows = [];
+  if(window.Papa){
+    const res = Papa.parse(text, { delimiter, skipEmptyLines: false });
+    rows = res.data || [];
+  } else {
+    rows = text.split(/\r?\n/).map(line => line.split(delimiter));
+  }
+
+  const reportRows = [];
+  const previewRows = [];
+  const perRuleTotal = {};
+  if(mode === "remove"){
+    for(const ph of placeholders){ perRuleTotal[ph] = 0; }
+  } else {
+    for(const r of rules){ if(r && r.from_raw !== ""){ perRuleTotal[`${r.from_raw}→${r.to_raw}`] = 0; } }
+  }
+  const specialCounts = { became_empty:0, whitespace_only:0, double_space:0, double_newline:0 };
+  let changedCells = 0;
+  let removedTotal = 0;
+
+  function countSpecial(flags){
+    for(const k of Object.keys(specialCounts)){
+      if(specialRules[k] && flags[k]) specialCounts[k]++;
+    }
+  }
+  function transformText(val){
+    if(mode === "remove"){
+      let out = val;
+      const detail = {};
+      for(const ph of placeholders){
+        if(!ph) continue;
+        const cnt = out.split(ph).length - 1;
+        if(cnt > 0){
+          detail[ph] = cnt;
+          out = out.split(ph).join("");
+        }
+      }
+      return { out, detail };
+    } else {
+      let out = val;
+      const detail = {};
+      for(const r of rules){
+        if(!r || !r.from) continue;
+        const cnt = out.split(r.from).length - 1;
+        if(cnt > 0){
+          const key = `${r.from_raw}→${r.to_raw}`;
+          detail[key] = (detail[key] || 0) + cnt;
+          out = out.split(r.from).join(r.to);
+        }
+      }
+      return { out, detail };
+    }
+  }
+
+  for(let r=0; r<rows.length; r++){
+    const row = rows[r];
+    if(!Array.isArray(row)) continue;
+    for(let c=0; c<row.length; c++){
+      const val = String(row[c] ?? "");
+      let hasAny = false;
+      if(mode === "remove"){
+        for(const ph of placeholders){ if(ph && val.includes(ph)) { hasAny=true; break; } }
+      } else {
+        for(const r of rules){ if(r && r.from && val.includes(r.from)) { hasAny=true; break; } }
+      }
+      if(!hasAny) continue;
+
+      const { out, detail } = transformText(val);
+      if(out === val) continue;
+
+      rows[r][c] = out;
+      const flags = flagsForText(out);
+      const { str, total } = formatRemovedDetail(detail);
+
+      changedCells += 1;
+      removedTotal += total;
+      for(const [ph, cnt] of Object.entries(detail)){
+        perRuleTotal[ph] = (perRuleTotal[ph] || 0) + cnt;
+      }
+      countSpecial(flags);
+
+      const cell = `R${r+1}C${c+1}`;
+      const beforePreview = (reportDetail === "full") ? val : clipText(val, reportPreviewLimit);
+      const afterPreview  = (reportDetail === "full") ? out : clipText(out, reportPreviewLimit);
+
+      reportRows.push([
+        "CSV", "CSV", cell, r+1, c+1,
+        val.length, out.length,
+        str, total,
+        !!flags.became_empty, !!flags.whitespace_only, !!flags.double_space, !!flags.double_newline,
+        beforePreview, afterPreview
+      ]);
+
+      if(previewRows.length < uiPreviewRows){
+        previewRows.push({
+          sheet: "CSV",
+          cell,
+          row: r+1,
+          col: c+1,
+          removed_detail: str,
+          removed_total: total,
+          flags,
+          before_preview: clipText(val, 200),
+          after_preview: clipText(out, 200),
+        });
+      }
+    }
+  }
+
+  let outCsv = "";
+  if(window.Papa && Papa.unparse){
+    outCsv = Papa.unparse(rows, { delimiter });
+  } else {
+    outCsv = rows.map(r => (r||[]).join(delimiter)).join("\n");
+  }
+  const bom = new Uint8Array([0xEF,0xBB,0xBF]);
+  const outBlob = new Blob([bom, outCsv], { type: "text/csv;charset=utf-8" });
+
+  let reportBlob = null;
+  if(reportEnabled){
+    const header = [
+      "파일유형","시트","셀","행","열","변경전길이","변경후길이",
+      "변경상세","변경총횟수",
+      "특이점_빈문자열","특이점_공백만","특이점_연속공백","특이점_연속줄바꿈",
+      "변경전미리보기","변경후미리보기"
+    ];
+    const aoa = [header, ...reportRows];
+
+    if(reportFormat === "csv"){
+      const csv = (window.Papa && Papa.unparse) ? Papa.unparse(aoa) : aoa.map(r => r.map(x => `"${String(x ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+      reportBlob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    } else {
+      if(!window.XLSX){
+        const csv = (window.Papa && Papa.unparse) ? Papa.unparse(aoa) : aoa.map(r => r.map(x => `"${String(x ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+        reportBlob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      } else {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, ws, "변경내역");
+        const arr = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        reportBlob = new Blob([arr], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      }
+    }
+  }
+
+  const summary = {
+    file_type: "csv",
+    encoding_used: (encSel === "auto" ? meta.guess_encoding : encSel),
+    delimiter: (delimiter === "\t" ? "\\t" : delimiter),
+    changed_cells: changedCells,
+    changed_total: removedTotal,
+    per_rule_total: Object.fromEntries(Object.entries(perRuleTotal).filter(([k,v])=>v)),
+    special_counts: Object.fromEntries(Object.entries(specialCounts).filter(([k,v])=>v)),
+  };
+
+  return { outBlob, reportBlob, summary, previewRows };
+}
+
+/* -------------------------
+   Analysis UI (per file + sheet selection)
+-------------------------- */
+function renderAnalyzedInfo(){
+  // Render in file list area under each file item
+  const box = $("fileList");
+  if(files.length === 0) return;
+
+  // rebuild list with analysis line if exists
+  box.innerHTML = "";
+  analyzedList.forEach((a, idx)=>{
+    const item = document.createElement("div");
+    item.className = "fileitem";
+    const baseTags = [];
+    baseTags.push(`<span class="badge">${escapeHtml(a.type.toUpperCase())}</span>`);
+    baseTags.push(`<span class="badge">${escapeHtml(formatBytes(a.size))}</span>`);
+
+    let line = "";
+    if(a.type === "xlsx"){
+      const sheetCount = a.xlsx_stats?.sheet_count ?? 0;
+      const rowsSum = a.xlsx_stats?.rows_sum ?? 0;
+      const textCells = a.xlsx_stats?.text_cells ?? 0;
+      const textChars = a.xlsx_stats?.text_chars ?? 0;
+      line = `시트 ${sheetCount}개, 행(데이터) ${rowsSum}개(시트 합), 텍스트 셀 ${textCells}개, 텍스트 글자 ${textChars}자`;
+    } else {
+      const rows = a.csv_stats?.rows ?? 0;
+      const textCells = a.csv_stats?.text_cells ?? 0;
+      const textChars = a.csv_stats?.text_chars ?? 0;
+      line = `행 ${rows}개, 텍스트 셀 ${textCells}개, 텍스트 글자 ${textChars}자`;
+    }
+
+    const rightButtons = [];
+    if(a.type === "xlsx" && getSheetMode() === "select"){
+      rightButtons.push(`<button type="button" data-sel="${a.id}">시트 선택</button>`);
+      const selCount = (a.selectedSheets?.length ?? a.xlsx_stats?.sheet_count ?? 0);
+      rightButtons.push(`<span class="badge">선택 시트: ${selCount}개</span>`);
+    }
+    rightButtons.push(`<button type="button" class="danger" data-rm="${idx}">삭제</button>`);
+
+    item.innerHTML = `
+      <div class="filemeta">
+        <b>${escapeHtml(a.name)}</b>
+        <span>${baseTags.join(" ")} <span class="mini">마지막 수정: ${new Date(a.lastModified).toLocaleString()}</span></span>
+        <span class="mini">${escapeHtml(line)}</span>
+      </div>
+      <div class="right">${rightButtons.join(" ")}</div>
+    `;
+    box.appendChild(item);
+  });
+
+  box.querySelectorAll("button[data-rm]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = parseInt(btn.dataset.rm, 10);
+      files.splice(idx, 1);
+      analyzedList.splice(idx, 1);
+      renderFileList();
+      if(analyzedList.length) renderAnalyzedInfo();
+      $("btnAnalyze").disabled = files.length === 0;
+      $("btnClearFiles").disabled = files.length === 0;
+      $("btnProcess").disabled = analyzedList.length === 0;
+    });
+  });
+  box.querySelectorAll("button[data-sel]").forEach(btn=>{
+    btn.addEventListener("click", ()=>openSheetModal(btn.dataset.sel));
+  });
+}
+
+async function analyzeAll(){
+  if(files.length === 0){ setStatus("파일을 추가해 주세요."); return; }
+  analyzedList = [];
+  lastResult = null;
+  $("resultCard").classList.add("hidden");
+  $("btnProcess").disabled = true;
+
+  setStatus("분석 중... (파일 크기에 따라 시간이 걸릴 수 있습니다)");
+  $("btnAnalyze").disabled = true;
+
+  try{
+    for(let i=0;i<files.length;i++){
+      const f = files[i];
+      const e = extOf(f.name);
+      const id = `${f.name}||${f.size}||${f.lastModified}`;
+
+      if(e === "xlsx"){
+        const stats = await computeXlsxStats(f);
+        analyzedList.push({
+          id, file: f, name: f.name, size: f.size, lastModified: f.lastModified,
+          type: "xlsx",
+          xlsx_stats: stats,
+          selectedSheets: stats.sheet_names.slice(), // default all selected
+        });
+      } else if(e === "csv"){
+        const stats = await analyzeCsv(f);
+        analyzedList.push({
+          id, file: f, name: f.name, size: f.size, lastModified: f.lastModified,
+          type: "csv",
+          csv_stats: stats,
+        });
+      }
+      // status update
+      setStatus(`분석 진행: ${i+1} / ${files.length}`);
+    }
+
+    renderAnalyzedInfo();
+    $("btnProcess").disabled = analyzedList.length === 0;
+    setStatus("분석 완료. 옵션을 선택한 뒤 변환을 실행해 주세요.");
+  } catch(e){
+    setStatus("분석 실패: " + (e?.message || String(e)));
+  } finally {
+    $("btnAnalyze").disabled = files.length === 0;
+  }
+}
+
+/* -------------------------
+   Sheet selection modal (per file)
+-------------------------- */
+let modalFileId = null;
+
+function openSheetModal(fileId){
+  const a = analyzedList.find(x => x.id === fileId);
+  if(!a || a.type !== "xlsx") return;
+  modalFileId = fileId;
+
+  $("modalTitle").textContent = `시트 선택 - ${a.name}`;
+  $("modalHint").textContent = "선택된 시트만 플레이스홀더 제거가 적용됩니다.";
+  const box = $("modalSheets");
+  box.innerHTML = "";
+
+  const allSheets = a.xlsx_stats.sheet_names || [];
+  const sel = new Set(a.selectedSheets || []);
+
+  for(const s of allSheets){
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" class="modalSheetCheck" value="${escapeHtml(s)}" ${sel.has(s) ? "checked" : ""}> <span>${escapeHtml(s)}</span>`;
+    box.appendChild(lab);
+  }
+
+  $("modalBack").classList.remove("hidden");
+}
+function closeSheetModal(){
+  if(!modalFileId){ $("modalBack").classList.add("hidden"); return; }
+  const a = analyzedList.find(x => x.id === modalFileId);
+  if(a && a.type === "xlsx"){
+    const chosen = [...document.querySelectorAll(".modalSheetCheck")].filter(x=>x.checked).map(x=>x.value);
+    a.selectedSheets = chosen;
+    renderAnalyzedInfo();
+  }
+  modalFileId = null;
+  $("modalBack").classList.add("hidden");
+}
+
+/* -------------------------
+   Result rendering
+-------------------------- */
+function renderSummaryText(txt){
+  $("summary").innerHTML = txt;
+}
+function renderChangesTable(changes){
+  const tbody = $("changesTable").querySelector("tbody");
+  tbody.innerHTML = "";
+  const q = ($("filterText").value || "").toLowerCase();
+  const sp = $("filterSpecial").value;
+
+  const filtered = (changes || []).filter(ch => {
+    const hay = `${ch.file} ${ch.sheet} ${ch.cell} ${ch.removed_detail} ${ch.before_preview} ${ch.after_preview}`.toLowerCase();
+    if(q && !hay.includes(q)) return false;
+    if(sp === "only" && !isSpecial(ch.flags)) return false;
+    return true;
+  });
+
+  for(const ch of filtered){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(ch.file)}</td>
+      <td>${escapeHtml(ch.sheet)}</td>
+      <td><code>${escapeHtml(ch.cell)}</code></td>
+      <td>${ch.removed_total} <span class="muted">${escapeHtml(ch.removed_detail || "")}</span></td>
+      <td>${flagTags(ch.flags)}</td>
+      <td>${escapeHtml(ch.before_preview || "")}</td>
+      <td>${escapeHtml(ch.after_preview || "")}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+function flagTags(flags){
+  if(!flags) return `<span class="muted">없음</span>`;
+  const tags = [];
+  if(flags.became_empty) tags.push("빈문자열");
+  if(flags.whitespace_only) tags.push("공백만");
+  if(flags.double_space) tags.push("연속공백");
+  if(flags.double_newline) tags.push("연속줄바꿈");
+  return tags.length ? tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join(" ") : `<span class="muted">없음</span>`;
+}
+
+/* -------------------------
+   Batch processing and ZIP output
+-------------------------- */
+async function processAll(){
+  if(analyzedList.length === 0){ setStatus("먼저 파일 분석을 해 주세요."); return; }
+
+  const mode = getMode();
+  const placeholders = normalizePlaceholders($("placeholders").value || "");
+  const rules = normalizeRulesFromUI();
+
+  if(mode === "remove"){
+    if(!placeholders.length){ setStatus("제거할 문자열을 1개 이상 입력해 주세요."); return; }
+  } else {
+    if(!rules.length){ setStatus("교체 규칙(찾을 문자열)을 1개 이상 입력해 주세요."); return; }
+  }
+
+  const sheetMode = getSheetMode();
+  if(sheetMode === "select"){
+    // validate per file selection
+    for(const a of analyzedList){
+      if(a.type === "xlsx" && (!a.selectedSheets || a.selectedSheets.length === 0)){
+        setStatus(`시트 선택이 비어 있습니다: ${a.name}`);
+        return;
+      }
+    }
+  }
+
+  const reportEnabled = $("reportEnabled").checked;
+  const reportFormat = $("reportFormat").value;
+  const reportDetail = $("reportDetail").value;
+  const reportPreviewLimit = parseInt($("reportPreviewLimit").value || "500", 10);
+  const uiPreviewRows = parseInt($("uiPreviewRows").value || "2000", 10);
+  const specialRules = getSpecialRules();
+  const csvEncoding = $("csvEncoding").value;
+  const csvDelimiter = $("csvDelimiter").value;
+
+  setStatus("변환 중... (파일 크기에 따라 시간이 걸릴 수 있습니다)");
+  $("btnProcess").disabled = true;
+  $("btnAnalyze").disabled = true;
+
+  const zip = new JSZip();
+  const allPreviewChanges = [];
+  let totalChangedCells = 0;
+  let totalChangedOps = 0;
+  let done = 0;
+
+  // combined summary report (CSV in zip)
+  const combinedSummaryRows = [["파일","유형","변경된셀","변경총횟수","특이점","규칙별변경(요약)","작업방식"]];
+
+  try{
+    for(const a of analyzedList){
+      const file = a.file;
+      const outName = buildOutName(a.name);
+
+      let outBlob = null;
+      let reportBlob = null;
+      let summary = null;
+      let previewRows = null;
+
+      if(a.type === "xlsx"){
+        const res = await processXlsx(file, {
+          mode,
+          placeholders,
+          rules,
+          sheetMode,
+          reportEnabled,
+          reportFormat,
+          reportDetail,
+          reportPreviewLimit: Number.isNaN(reportPreviewLimit) ? 500 : reportPreviewLimit,
+          uiPreviewRows: Math.max(50, (Number.isNaN(uiPreviewRows) ? 2000 : uiPreviewRows)),
+          specialRules,
+          csvEncoding,
+          csvDelimiter,
+        }, a.selectedSheets);
+        outBlob = res.outBlob;
+        reportBlob = res.reportBlob;
+        summary = res.summary;
+        previewRows = res.previewRows || [];
+      } else {
+        const res = await processCsv(file, {
+          mode,
+          placeholders,
+          rules,
+          reportEnabled,
+          reportFormat,
+          reportDetail,
+          reportPreviewLimit: Number.isNaN(reportPreviewLimit) ? 500 : reportPreviewLimit,
+          uiPreviewRows: Math.max(50, (Number.isNaN(uiPreviewRows) ? 2000 : uiPreviewRows)),
+          specialRules,
+          csvEncoding,
+          csvDelimiter,
+        });
+        outBlob = res.outBlob;
+        reportBlob = res.reportBlob;
+        summary = res.summary;
+        previewRows = res.previewRows || [];
+      }
+
+      zip.file(outName, outBlob);
+
+      if(reportBlob){
+        const reportExt = (reportFormat === "xlsx" && window.XLSX) ? "xlsx" : (reportFormat === "xlsx" ? "csv" : "csv");
+        const reportName = outName.replace(/\.[^.]+$/, "") + `_변경내역.${reportExt}`;
+        zip.file(reportName, reportBlob);
+      }
+
+      for(const ch of previewRows){
+        allPreviewChanges.push({ file: a.name, ...ch });
+      }
+
+      totalChangedCells += (summary?.changed_cells || 0);
+      totalChangedOps += (summary?.changed_total || 0);
+
+      const sp = summary?.special_counts ? Object.entries(summary.special_counts).map(([k,v])=>`${k}:${v}`).join(" / ") : "";
+      const ph = summary?.per_rule_total ? Object.entries(summary.per_rule_total).map(([k,v])=>`${k}:${v}`).join(" / ") : "";
+      combinedSummaryRows.push([a.name, a.type.toUpperCase(), summary?.changed_cells||0, summary?.changed_total||0, sp, ph, (mode === "remove" ? "문자열 제거" : "문자열 교체")]);
+
+      done += 1;
+      setStatus(`변환 진행: ${done} / ${analyzedList.length}`);
+    }
+
+    // combined summary report
+    if(window.Papa && Papa.unparse){
+      const csv = Papa.unparse(combinedSummaryRows);
+      zip.file(`전체요약_${nowStamp()}.csv`, csv);
+    } else {
+      const csv = combinedSummaryRows.map(r => r.map(x => `"${String(x ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+      zip.file(`전체요약_${nowStamp()}.csv`, csv);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+
+    const multiple = analyzedList.length > 1;
+    const zipName = multiple ? `플레이스홀더제거_결과_${nowStamp()}.zip` : `${buildOutName(analyzedList[0].name).replace(/\.[^.]+$/, "")}_${nowStamp()}.zip`;
+
+    lastResult = { zipBlob, zipName, allPreviewChanges, totalChangedCells, totalChangedOps, fileCount: analyzedList.length };
+
+    $("resultCard").classList.remove("hidden");
+    $("btnDownloadOut").disabled = false;
+    $("btnDownloadOut").onclick = ()=>{
+      const url = URL.createObjectURL(zipBlob);
+      const aTag = document.createElement("a");
+      aTag.href = url;
+      aTag.download = zipName;
+      document.body.appendChild(aTag);
+      aTag.click();
+      aTag.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    };
+
+    const summaryHtml = `
+      <div>처리 파일 수: <b>${analyzedList.length}</b></div>
+      <div>변경된 셀 수 합계: <b>${totalChangedCells}</b>, 변경 총 횟수 합계: <b>${totalChangedOps}</b></div>
+      <div class="mini">다운로드는 ZIP 1개로 제공됩니다. ZIP 안에 변환 파일과 리포트(선택)가 들어 있습니다.</div>
+      <div class="mini">현재 작업 방식: <b>${(mode === "remove" ? "문자열 제거" : "문자열 교체")}</b></div>
+    `;
+    renderSummaryText(summaryHtml);
+    renderChangesTable(allPreviewChanges);
+
+    setStatus("완료되었습니다. 다운로드 버튼으로 결과 ZIP을 받으실 수 있습니다.");
+  } catch(e){
+    setStatus("변환 실패: " + (e?.message || String(e)));
+  } finally {
+    $("btnProcess").disabled = analyzedList.length === 0;
+    $("btnAnalyze").disabled = files.length === 0;
+  }
+}
+
+/* -------------------------
+   Events wiring
+-------------------------- */
+function setup(){
+  // pick files
+  $("btnPick").addEventListener("click", ()=> $("file").click());
+  $("file").addEventListener("change", (ev)=>{
+    const list = Array.from(ev.target.files || []);
+    addFiles(list);
+    ev.target.value = "";
+  });
+
+  // clear
+  $("btnClearFiles").addEventListener("click", clearFiles);
+
+  // mode tabs
+  function setMode(m){
+    document.body.dataset.mode = m;
+    const removeActive = (m === "remove");
+    $("tabRemove").classList.toggle("primary", removeActive);
+    $("tabReplace").classList.toggle("primary", !removeActive);
+    $("panelRemove").classList.toggle("hidden", !removeActive);
+    $("panelReplace").classList.toggle("hidden", removeActive);
+  }
+  $("tabRemove").addEventListener("click", ()=> setMode("remove"));
+  $("tabReplace").addEventListener("click", ()=> setMode("replace"));
+  setMode("remove");
+
+  // quick placeholder: «T:\n»
+  $("btnQuickT").addEventListener("click", ()=>{
+    const token = "«T:\\n»";
+    const cur = $("placeholders").value || "";
+    const lines = cur.split(/\r?\n/).filter(x=>x !== "");
+    if(lines.includes(token)){
+      setStatus("이미 목록에 있습니다.");
+      return;
+    }
+    $("placeholders").value = (cur.trim() ? (cur.replace(/\s*$/,"") + "\n") : "") + token + "\n";
+    setStatus("퀵 플레이스홀더가 추가되었습니다.");
+  });
+  $("btnClearPH").addEventListener("click", ()=>{
+    $("placeholders").value = "";
+    setStatus("제거 목록이 비워졌습니다.");
+  });
+
+  // replace rules UI
+  function addRuleRow(fromVal="", toVal=""){
+    const box = $("replaceRules");
+    const row = document.createElement("div");
+    row.className = "row rrRow";
+    row.style.gap = "8px";
+    row.style.margin = "8px 0";
+    row.innerHTML = `
+      <div style="flex:1; min-width: 220px;">
+        <label>찾을 문자열</label>
+        <input type="text" class="rrFrom" placeholder="예: {{A}} 또는 줄바꿈은 \\n" value="${escapeHtml(fromVal)}">
+      </div>
+      <div style="flex:1; min-width: 220px;">
+        <label>바꿀 문자열</label>
+        <input type="text" class="rrTo" placeholder="예: {{B}} (빈 값도 가능)" value="${escapeHtml(toVal)}">
+      </div>
+      <div class="right" style="align-self:flex-end;">
+        <button type="button" class="danger rrDel">삭제</button>
+      </div>
+    `;
+    box.appendChild(row);
+    row.querySelector(".rrDel").addEventListener("click", ()=> row.remove());
+  }
+  function clearRules(){
+    $("replaceRules").innerHTML = "";
+    setStatus("교체 규칙이 비워졌습니다.");
+  }
+  $("btnAddRule").addEventListener("click", ()=> addRuleRow());
+  $("btnClearRules").addEventListener("click", clearRules);
+
+  clearRules();
+  addRuleRow();
+
+  // drop zone
+  const drop = $("drop");
+  drop.addEventListener("dragover", (e)=>{
+    e.preventDefault();
+    drop.classList.add("dragover");
+  });
+  drop.addEventListener("dragleave", ()=> drop.classList.remove("dragover"));
+  drop.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    drop.classList.remove("dragover");
+    const list = Array.from(e.dataTransfer.files || []);
+    addFiles(list);
+  });
+
+  // analyze/process
+  $("btnAnalyze").addEventListener("click", analyzeAll);
+  $("btnProcess").addEventListener("click", processAll);
+
+  // filter
+  $("filterText").addEventListener("input", ()=>{
+    if(lastResult) renderChangesTable(lastResult.allPreviewChanges);
+  });
+  $("filterSpecial").addEventListener("change", ()=>{
+    if(lastResult) renderChangesTable(lastResult.allPreviewChanges);
+  });
+
+  // modal
+  $("modalClose").addEventListener("click", closeSheetModal);
+  $("modalBack").addEventListener("click", (e)=>{
+    if(e.target.id === "modalBack") closeSheetModal();
+  });
+  $("modalAll").addEventListener("click", ()=>{
+    document.querySelectorAll(".modalSheetCheck").forEach(x=>x.checked=true);
+  });
+  $("modalNone").addEventListener("click", ()=>{
+    document.querySelectorAll(".modalSheetCheck").forEach(x=>x.checked=false);
+  });
+
+  // sheetMode change affects per-file UI
+  document.querySelectorAll('input[name="sheetMode"]').forEach(r=>{
+    r.addEventListener("change", ()=>{
+      if(analyzedList.length) renderAnalyzedInfo();
+    });
+  });
+
+  renderFileList();
+}
+setup();
+</script>
+<script>
+(() => {
+  const current = (location.pathname.split("/").pop() || "").toLowerCase();
+  document.querySelectorAll(".gnb a[data-page]").forEach(a => {
+    if ((a.dataset.page || "").toLowerCase() === current) a.classList.add("active");
+  });
+})();
+</script>
+</body>
+</html>

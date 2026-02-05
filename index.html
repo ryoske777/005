@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>도구 모음</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --text:#e9eef7;
+      --muted:#aab6cc;
+      --line:rgba(255,255,255,0.10);
+      --panel:rgba(255,255,255,0.04);
+    }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    /* ===== 상단 GNB ===== */
+    .gnb{
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      border-bottom: 1px solid var(--line);
+      background: rgba(10,14,22,0.92);
+      backdrop-filter: blur(10px);
+    }
+    .gnb-inner{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .gnb-brand{
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: .2px;
+      color: rgba(233,238,247,0.95);
+      user-select: none;
+    }
+    .gnb-links{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .gnb a{
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 12px;
+      color: rgba(170,182,204,0.95);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+    }
+    .gnb a:hover{
+      color: rgba(233,238,247,0.95);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 22px 16px 60px; }
+    h1{ margin: 0 0 12px; font-size: 18px; }
+    .card{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
+    a.btn{
+      display:block;
+      text-decoration:none;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(0,0,0,0.20);
+    }
+    a.btn:hover{ background: rgba(255,255,255,0.06); }
+    .title{ font-weight: 900; margin-bottom: 6px; }
+    .desc{ color: var(--muted); font-size: 13px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <nav class="gnb">
+    <div class="gnb-inner">
+      <div class="gnb-brand">TOOLS</div>
+      <div class="gnb-links">
+        <a href="review.html">번역 검수</a>
+        <a href="placeholder.html">플레이스홀더 도구</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <h1>도구 모음</h1>
+    <div class="card">
+      <div class="grid">
+        <a class="btn" href="review.html">
+          <div class="title">번역 검수</div>
+          <div class="desc">원본과 번역 비교, 플레이스홀더·숫자·언어 문자 검사</div>
+        </a>
+        <a class="btn" href="placeholder.html">
+          <div class="title">플레이스홀더 도구</div>
+          <div class="desc">엑셀/CSV에서 플레이스홀더 제거 및 교체를 배치 처리</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
