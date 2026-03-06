@@ -396,21 +396,31 @@
       font-size:12px; color:var(--muted); line-height:1.45;
     }
 
-    .langExcludeInput{
-      flex:1;
-      min-width:0;
-      padding:5px 9px;
+    .langExcludeWrap{
+      display:flex; gap:8px; align-items:center; flex-wrap:nowrap;
+      padding:6px 8px;
       border:1px solid rgba(255,255,255,0.10);
-      border-radius:10px;
-      background: rgba(0,0,0,0.12);
+      border-radius:12px;
+      background: rgba(0,0,0,0.10);
+      width:100%;
+    }
+    .langExcludeWrap .exLabel{
+      font-size:12px; color:rgba(170,182,204,0.9); font-weight:800; white-space:nowrap;
+    }
+    .langExcludeInput{
+      flex:1; min-width:0;
+      padding:3px 7px;
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:8px;
+      background: rgba(0,0,0,0.14);
       color: var(--text);
       font-size:12px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
       outline:none;
     }
-    .langExcludeInput::placeholder{ color:var(--muted); }
-    .langExcludeInput:focus{ border-color:rgba(124,198,255,0.5); background:rgba(124,198,255,0.06); }
-  
+    .langExcludeInput::placeholder{ color:rgba(170,182,204,0.55); }
+    .langExcludeInput:focus{ border-color:rgba(124,198,255,0.45); background:rgba(124,198,255,0.06); }
+
     /* ===== 상단 GNB ===== */
     .gnb{
       position: sticky;
@@ -637,17 +647,18 @@ Status Ailment	Statusveränderung"></textarea>
               </div>
             </div>
 
-            <div class="langAllow" id="langAllowList"></div>
+            <div class=”langAllow” id=”langAllowList”></div>
 
-            <div class=”langRow”>
-              <span class=”gtitle” style=”white-space:nowrap;”>키워드 예외</span>
+            <div class=”langExcludeWrap”>
+              <span class=”exLabel”>키워드 예외</span>
               <input type=”text” id=”langExcludeInput” class=”langExcludeInput”
-                placeholder=”예: Lv, CL, HP (콤마로 구분)” spellcheck=”false” autocomplete=”off” />
+                placeholder=”Lv, CL, HP … (콤마로 구분)” spellcheck=”false” autocomplete=”off” />
             </div>
+
             <div class=”langHint”>
               - 위에서 체크된 항목만 “허용”입니다.<br/>
               - 허용되지 않은 문자가 발견되면 아래 목록에 위치(S/L)로 표시됩니다.<br/>
-              - <b>키워드 예외</b>: 비허용 언어에 해당하더라도 입력된 단어는 검사에서 제외합니다. (대소문자 구분)
+              - <b>키워드 예외</b>: 비허용 언어여도 입력된 단어는 검사에서 제외합니다. (콤마로 구분, 대소문자 구분)
             </div>
           </div>
 
@@ -1091,8 +1102,8 @@ Status Ailment	Statusveränderung"></textarea>
     if (!keywords.length) return text;
     let result = text;
     for (const kw of keywords){
-      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      result = result.replace(new RegExp(escaped, 'g'), '');
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      result = result.replace(new RegExp(escaped, "g"), "");
     }
     return result;
   }
@@ -1121,10 +1132,10 @@ Status Ailment	Statusveränderung"></textarea>
 
       // Language scan only if scope is enabled
       if (doLeft || doRight){
-        const excludeKws = getExcludeKeywords();
-        const leftForScan = applyKeywordExclusions(r.left, excludeKws);
+        const excludeKws  = getExcludeKeywords();
+        const leftForScan  = applyKeywordExclusions(r.left,  excludeKws);
         const rightForScan = applyKeywordExclusions(r.right, excludeKws);
-        const leftScan = doLeft ? scanScriptsInText(leftForScan) : { counts:new Map(), firstHit:new Map() };
+        const leftScan  = doLeft  ? scanScriptsInText(leftForScan)  : { counts:new Map(), firstHit:new Map() };
         const rightScan = doRight ? scanScriptsInText(rightForScan) : { counts:new Map(), firstHit:new Map() };
 
         addCounts(totalAll, leftScan.counts);
@@ -1610,7 +1621,7 @@ Status Ailment	Statusveränderung"></textarea>
     });
   });
 
-  // 키워드 예외 입력란: 변경 시 자동 재분석
+  // 키워드 예외 자동 재분석
   langExcludeInput.addEventListener("input", ()=>{
     const mode = getMode();
     const hasData =
