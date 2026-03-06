@@ -192,6 +192,18 @@
     .sc-label.on .sc-code { color: #ffa657; }
     .sc-label:not(.on):hover { background: var(--surface2); color: var(--text); }
 
+    /* Script count badge */
+    .sc-cnt {
+      min-width: 18px; text-align: center;
+      font-family: monospace; font-size: 10px; font-weight: 700;
+      color: rgba(255,166,87,0.45);
+      background: rgba(255,166,87,0.07);
+      padding: 1px 4px; border-radius: 4px;
+      transition: .15s;
+    }
+    .sc-cnt:empty { display: none; }
+    .sc-label.on .sc-cnt { color: #ffb347; background: rgba(255,166,87,0.2); }
+
     /* Exception textarea */
     .exception-area { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 5px; }
     .exception-label {
@@ -366,7 +378,7 @@
         <span class="card-title">텍스트 입력</span>
         <span class="card-meta" id="textLineMeta"></span>
       </div>
-      <textarea id="mainInput" spellcheck="false" placeholder="분석할 텍스트를 붙여넣으십시오.&#10;&#10;• 한 줄 = 한 행으로 처리됩니다.&#10;• 오른쪽에서 청크 크기를 설정하면 분석을 시작할 수 있습니다."></textarea>
+      <textarea id="mainInput" spellcheck="false" placeholder="분석할 텍스트를 붙여넣으십시오.&#10;&#10;• 한 줄 = 한 행으로 처리됩니다.&#10;• 오른쪽에서 검색 행 수를 설정하면 분석을 시작할 수 있습니다."></textarea>
     </div>
 
     <!-- EXCEL mode -->
@@ -413,6 +425,12 @@
         <div class="head-row">
           <button class="mini-btn" id="selectAllScripts">전체선택</button>
           <button class="mini-btn" id="clearAllScripts">전체해제</button>
+          <div style="width:1px;height:16px;background:var(--border2);margin:0 2px"></div>
+          <div class="mode-grp" id="countScopeGroup"
+            data-tip="카운트 숫자 기준: 현재 검색 범위 vs 전체 데이터 (전체는 첫 분석 후 캐싱됨)">
+            <button class="active" id="scopeChunk">검색 기준</button>
+            <button id="scopeAll">전체 기준</button>
+          </div>
         </div>
       </div>
       <div class="script-groups" id="scriptGroups">
@@ -423,7 +441,7 @@
           <span>예외 처리 <span class="exception-hint">— 탐지 전 제거할 문자열 (콤마 구분)</span></span>
         </div>
         <textarea id="excludeInput" spellcheck="false"
-          placeholder="예) Lv, CL, HP, EP, MP&#10;     여러 항목은 콤마(,)로 구분하세요&#10;     입력 즉시 현재 청크에 반영됩니다"></textarea>
+          placeholder="예) Lv, CL, HP, EP, MP&#10;     여러 항목은 콤마(,)로 구분하세요&#10;     입력 즉시 현재 검색 범위에 반영됩니다"></textarea>
       </div>
     </div>
 
@@ -431,9 +449,9 @@
     <div class="card">
       <div class="card-head">
         <div class="chunk-bar">
-          <span class="chunk-lbl">청크</span>
+          <span class="chunk-lbl">검색</span>
           <input class="chunk-input" id="chunkSizeInput" type="number" min="1" step="500"
-            placeholder="행 수" data-tip="한 번에 분석할 행 수 (필수 입력)">
+            placeholder="행 수" data-tip="한 번에 검색할 행 수 (필수 입력)">
           <span class="chunk-lbl" style="color:var(--muted)">행</span>
           <button class="chunk-nav-btn" id="prevBtn" disabled>◀</button>
           <span class="chunk-page-info" id="chunkInfo">-</span>
@@ -452,7 +470,7 @@
           </thead>
           <tbody id="tbody">
             <tr><td colspan="3" class="empty" style="padding:16px 12px">
-              ① 오른쪽 상단 청크 행 수 입력 → ② 탐지 언어 선택 → ③ 분석 버튼 클릭
+              ① 오른쪽 상단 검색 행 수 입력 → ② 탐지 언어 선택 → ③ 분석 버튼 클릭
             </td></tr>
           </tbody>
         </table>
@@ -545,6 +563,11 @@ let excelWs    = null;
 let excelRange = null;
 let excelColIdx = -1;
 let excelTotalRows = 0;
+
+// Count scope
+let countScope      = "chunk"; // "chunk" | "all"
+let allCountsCache  = null;    // Map<code, rowCount> over ALL rows
+let allCountsDirty  = true;    // invalidate when data/exceptions change
 
 // ── SCRIPT DETECTION ──
 function isDigit(cp)  { return cp >= 0x30 && cp <= 0x39; }
@@ -639,6 +662,62 @@ function scanText(text, selectedCodes, excludeKws) {
     i += ch.length;
   }
   return results; // Map<code, {count, snippet, firstChar}>
+}
+
+// ── CHIP COUNT FUNCTIONS ──
+
+// From current chunk's detMap: how many rows contain each script?
+function computeChipCountsFromChunk(detMap) {
+  const counts = new Map();
+  for (const [, det] of detMap) {
+    for (const [code] of det) {
+      counts.set(code, (counts.get(code) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
+// Scan ALL rows for every script (not just selected ones) and cache result.
+// This runs over allRows to give a "전체 기준" count.
+function computeAllCountsSync() {
+  if (!allCountsDirty && allCountsCache) return allCountsCache;
+  const kws    = getExcludeKws();
+  const counts = new Map();
+  for (const row of allRows) {
+    let t = row.text;
+    for (const kw of kws)
+      t = t.replace(new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "");
+    const seenCodes = new Set();
+    for (let i = 0; i < t.length; ) {
+      const cp = t.codePointAt(i);
+      const ch = String.fromCodePoint(cp);
+      const code = scriptOf(cp);
+      if (code && !seenCodes.has(code)) {
+        seenCodes.add(code);
+        counts.set(code, (counts.get(code) || 0) + 1);
+      }
+      i += ch.length;
+    }
+  }
+  allCountsCache = counts;
+  allCountsDirty = false;
+  return counts;
+}
+
+// Render counts onto script chip badges
+function updateChipCounts(counts) {
+  for (const s of SCRIPTS_FLAT) {
+    const el = $(`cnt_${s.code}`);
+    if (!el) continue;
+    const n = counts ? (counts.get(s.code) || 0) : 0;
+    el.textContent = n > 0 ? String(n) : "";
+  }
+}
+
+// Invalidate the "전체 기준" cache (call when data or exceptions change)
+function invalidateAllCounts() {
+  allCountsDirty = true;
+  allCountsCache = null;
 }
 
 // ── HELPERS ──
@@ -780,7 +859,7 @@ function renderTable(chunkRows, detectionMap) {
   }
 
   if (!frag.childElementCount) {
-    tbody.innerHTML = `<tr><td colspan="3" class="empty" style="padding:14px 12px">현재 청크에서 선택된 언어의 문자가 발견되지 않았습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="empty" style="padding:14px 12px">현재 검색 범위에서 선택된 언어의 문자가 발견되지 않았습니다.</td></tr>`;
     $("resultMeta").textContent = "탐지 없음";
   } else {
     tbody.appendChild(frag);
@@ -818,6 +897,22 @@ function analyzeAndRender(keepPage = false) {
   renderTable(rows, detMap);
   updateChunkNav();
   updateTextMeta();
+
+  // Update script chip counts
+  if (countScope === "chunk") {
+    updateChipCounts(computeChipCountsFromChunk(detMap));
+  } else {
+    // "all" scope: compute once and cache (may take a moment on large datasets)
+    if (allCountsDirty) {
+      // Run async so it doesn't block render
+      setTimeout(() => {
+        const c = computeAllCountsSync();
+        updateChipCounts(c);
+      }, 0);
+    } else {
+      updateChipCounts(allCountsCache);
+    }
+  }
 }
 
 // ── VALIDATE BEFORE ANALYZE ──
@@ -828,7 +923,7 @@ function validateAndAnalyze(keepPage = false) {
     inp.classList.remove("pulse");
     void inp.offsetWidth; // reflow to restart animation
     inp.classList.add("pulse");
-    showToast("청크 행 수를 입력해야 분석을 시작할 수 있습니다.", "warn");
+    showToast("검색 행 수를 입력해야 분석을 시작할 수 있습니다.", "warn");
     inp.focus();
     return;
   }
@@ -851,7 +946,9 @@ function updateTextMeta() {
 // ── RESET ──
 function resetResults() {
   allRows = []; rows = []; chunkPage = 0;
-  $("tbody").innerHTML = `<tr><td colspan="3" class="empty" style="padding:16px 12px">① 청크 행 수 입력 → ② 탐지 언어 선택 → ③ 분석 버튼 클릭</td></tr>`;
+  invalidateAllCounts();
+  updateChipCounts(null);
+  $("tbody").innerHTML = `<tr><td colspan="3" class="empty" style="padding:16px 12px">① 검색 행 수 입력 → ② 탐지 언어 선택 → ③ 분석 버튼 클릭</td></tr>`;
   $("chunkInfo").textContent = "-";
   $("chunkInfo").classList.remove("active");
   $("prevBtn").disabled = true;
@@ -890,7 +987,9 @@ function buildScriptGroupsUI() {
       const nameEl = document.createElement("span");
       nameEl.textContent = s.label;
 
-      label.append(cb, codeEl, nameEl);
+      const cntEl = document.createElement("span");
+      cntEl.className = "sc-cnt"; cntEl.id = `cnt_${s.code}`;
+      label.append(cb, codeEl, nameEl, cntEl);
       cb.addEventListener("change", () => {
         label.classList.toggle("on", cb.checked);
         if (allRows.length > 0 && getChunkSize() > 0) analyzeAndRender(true);
@@ -1023,9 +1122,10 @@ $("chunkSizeInput").addEventListener("change", () => {
   }
 });
 
-// Exception input — keepPage=true (don't reset chunk)
+// Exception input — keepPage=true, invalidate full cache
 let excludeTimer = null;
 $("excludeInput").addEventListener("input", () => {
+  invalidateAllCounts();
   clearTimeout(excludeTimer);
   excludeTimer = setTimeout(() => {
     if (allRows.length > 0 && getChunkSize() > 0) analyzeAndRender(true);
@@ -1041,6 +1141,24 @@ $("mainInput").addEventListener("input", () => {
 });
 $("mainInput").addEventListener("paste", () => {
   setTimeout(updateTextMeta, 10);
+});
+
+// Count scope toggle
+$("scopeChunk").addEventListener("click", () => {
+  countScope = "chunk";
+  $("scopeChunk").classList.add("active");
+  $("scopeAll").classList.remove("active");
+  if (allRows.length > 0 && getChunkSize() > 0) analyzeAndRender(true);
+});
+$("scopeAll").addEventListener("click", () => {
+  countScope = "all";
+  $("scopeAll").classList.add("active");
+  $("scopeChunk").classList.remove("active");
+  // Compute full counts (async to avoid blocking UI)
+  setTimeout(() => {
+    const c = computeAllCountsSync();
+    updateChipCounts(c);
+  }, 0);
 });
 
 // Script select/deselect all
@@ -1085,6 +1203,7 @@ $("colSelect").addEventListener("change", e => {
   excelColIdx = parseInt(v, 10);
   allRows = buildRowsFromExcel();
   chunkPage = 0;
+  invalidateAllCounts();
   resetResults();
   showToast(`열 선택 완료 (${allRows.length}행). 탐지 언어를 선택하고 분석하세요.`, "ok");
 });
