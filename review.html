@@ -5,1669 +5,1130 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>번역 검수 도구</title>
   <style>
-    :root{
-      --bg:#0b0f17; --panel:rgba(255,255,255,0.03);
-      --text:#e9eef7; --muted:#aab6cc; --line:#22304a;
-      --btn:#1a2842; --btn2:#233454;
-      --info:#7cc6ff; --ph:#b28dff; --num:#7cc6ff; --lang:#ffb86b;
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.03);
+      --surface2: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --accent: #58a6ff;
+      --ph: #d2a8ff;
+      --num: #58a6ff;
+      --lang: #ffa657;
     }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
-      background: radial-gradient(1200px 600px at 20% 0%, #14213d 0%, var(--bg) 55%);
-      color:var(--text);
-    }
-    header{
-      padding:16px 18px;
-      border-bottom:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
-    }
-    header h1{ margin:0; font-size:16px; letter-spacing:0.2px; }
-    header p{ margin:6px 0 0; font-size:12px; color:var(--muted); line-height:1.4; }
-
-    .wrap{ max-width:1750px; margin:0 auto; padding:14px 14px 24px; }
-
-    /* ===== Tooltip ===== */
-    .hasTip{ position:relative; }
-    .hasTip[data-tip]::after{
-      content: attr(data-tip);
-      position:absolute;
-      left: 50%;
-      bottom: calc(100% + 10px);
-      transform: translateX(-50%);
-      width: max-content;
-      max-width: 320px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.14);
-      background: rgba(10,14,22,0.98);
-      color: rgba(233,238,247,0.95);
-      font-size:12px;
-      line-height:1.45;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-      opacity:0;
-      pointer-events:none;
-      transition: opacity 120ms ease;
-      z-index: 999;
-      white-space: normal;
-    }
-    .hasTip[data-tip]::before{
-      content:"";
-      position:absolute;
-      left:50%;
-      bottom: calc(100% + 4px);
-      transform: translateX(-50%);
-      border:6px solid transparent;
-      border-top-color: rgba(255,255,255,0.14);
-      opacity:0;
-      transition: opacity 120ms ease;
-      pointer-events:none;
-      z-index: 999;
-    }
-    .hasTip:hover::after, .hasTip:hover::before{ opacity:1; }
-
-    /* ===== Toolbar ===== */
-    .toolbar{
-      display:flex; flex-wrap:wrap; gap:10px 12px; align-items:stretch;
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:10px;
-      margin-bottom:12px;
-    }
-    .tgroup{
-      display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center;
-      padding:6px 8px;
-      border:1px solid rgba(255,255,255,0.06);
-      background: rgba(0,0,0,0.10);
-      border-radius:12px;
-    }
-    .tgroup .gtitle{
-      font-size:12px;
-      color:rgba(170,182,204,0.9);
-      font-weight:800;
-      margin-right:4px;
-      white-space:nowrap;
-    }
-
-    .toolbar button{
-      border:1px solid var(--line);
-      background:var(--btn);
-      color:var(--text);
-      padding:8px 12px;
-      border-radius:10px;
-      cursor:pointer;
-      font-weight:700;
-    }
-    .toolbar button:hover{ background:var(--btn2); }
-    .toolbar .ghost{ background:transparent; }
-    .toolbar label{
-      display:flex; gap:8px; align-items:center;
-      color:var(--muted); font-size:12px; user-select:none;
-      white-space:nowrap;
-      padding:4px 6px;
-      border-radius:10px;
-    }
-    .toolbar input[type="checkbox"], .toolbar input[type="radio"]{ width:16px; height:16px; accent-color:#7cc6ff; }
-
-    .pill{
-      display:inline-flex; gap:8px; align-items:center;
-      padding:4px 8px;
-      border:1px solid var(--line);
-      border-radius:999px;
-      background:rgba(0,0,0,0.12);
-      color:var(--muted);
-      font-size:12px;
-      white-space:nowrap;
-    }
-    .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; background:var(--muted); }
-    .dot.info{ background:var(--info); }
-    .dot.ph{ background:var(--ph); }
-    .dot.num{ background:var(--num); }
-    .dot.lang{ background:var(--lang); }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 580px 1fr;
-      gap:12px;
-      align-items:start;
-    }
-    @media (max-width: 1200px){ .grid{ grid-template-columns: 1fr; } }
-
-    .card{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:14px;
-      overflow:hidden;
-    }
-    .card-head{
-      padding:10px 12px;
-      border-bottom:1px solid var(--line);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
-    }
-    .card-head .title{ font-size:13px; font-weight:800; }
-    .card-head .meta{ font-size:12px; color:var(--muted); white-space:nowrap; }
-
-    textarea{
-      width:100%;
-      height:420px;
-      border:0;
-      outline:none;
-      padding:12px;
-      resize:vertical;
-      background: rgba(0,0,0,0.15);
-      color:var(--text);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size:13px;
-      line-height:1.55;
-    }
-
-    .split2{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-      padding:10px;
-      background: rgba(0,0,0,0.08);
-    }
-    @media (max-width: 900px){ .split2{ grid-template-columns: 1fr; } }
-    .split2 .sub{
-      border:1px solid rgba(255,255,255,0.08);
-      border-radius:12px;
-      overflow:hidden;
-      background: rgba(0,0,0,0.10);
-    }
-    .subHead{
-      padding:8px 10px;
-      border-bottom:1px solid rgba(255,255,255,0.08);
-      font-size:12px;
-      color:var(--muted);
-      font-weight:800;
-      display:flex; justify-content:space-between; align-items:center; gap:8px;
-    }
-    .subHead small{ font-weight:700; color:rgba(170,182,204,0.9); }
-
-    .hint{
-      padding:12px 12px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.6;
-      border-top:1px solid rgba(255,255,255,0.06);
-      background: rgba(0,0,0,0.08);
-    }
-    .hint ol{
-      margin: 0;
-      padding-left: 18px;
-    }
-    .hint li{ margin: 6px 0; }
-    .hint b{ color: rgba(233,238,247,0.92); }
-    .hint .subnote{
-      margin-top:10px;
-      padding-top:10px;
-      border-top:1px dashed rgba(255,255,255,0.14);
-    }
-
-    .rightWrap{
-      display:grid;
-      grid-template-columns: 1fr 560px;
-      gap:12px;
-    }
-    @media (max-width: 1500px){ .rightWrap{ grid-template-columns: 1fr; } }
-
-    .tableWrap{
-      overflow:auto;
-      max-height: 760px;
-    }
-    table{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      font-size:12px;
-    }
-    thead th{
-      position:sticky; top:0;
-      background: rgba(12,18,30,0.98);
-      border-bottom:1px solid var(--line);
-      z-index:1;
-      text-align:left;
-      padding:10px 10px;
-      white-space:nowrap;
-    }
-    tbody td{
-      border-bottom:1px solid rgba(255,255,255,0.06);
-      padding:8px 10px;
-      vertical-align:top;
-    }
-    tbody tr:hover td{ background: rgba(255,255,255,0.03); }
-
-    .colNo{ width:220px; color:var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-    .colL{ width:42%; }
-    .colR{ width:58%; }
-
-    .cell{
-      border:1px solid transparent;
-      border-radius:10px;
-      padding:6px 8px;
-      min-height: 30px;
-      white-space:pre-wrap;
-      word-break:break-word;
-      background: rgba(0,0,0,0.08);
-    }
-    .cell:focus{
-      outline:none;
-      border-color: rgba(124,198,255,0.6);
-      background: rgba(124,198,255,0.08);
-    }
-    .hl-ph{ box-shadow: inset 0 0 0 2px rgba(178,141,255,0.72); }
-    .hl-num{ box-shadow: inset 0 0 0 2px rgba(124,198,255,0.72); }
-    .hl-lang{ box-shadow: inset 0 0 0 2px rgba(255,184,107,0.72); }
-
-    .badgeRow{
-      display:flex; align-items:center; gap:6px; flex-wrap:wrap; white-space:nowrap;
-    }
-    .badge{
-      display:inline-flex; align-items:center; gap:6px;
-      padding:2px 8px; border-radius:999px;
-      border:1px solid var(--line); background: rgba(0,0,0,0.12);
-      font-size:11px; color: var(--muted);
-    }
-    .badge b{ color: var(--text); font-weight:800; }
-    .badge.ph{ border-color: rgba(178,141,255,0.35); background: rgba(178,141,255,0.12); color: rgba(233,238,247,0.9); }
-    .badge.num{ border-color: rgba(124,198,255,0.35); background: rgba(124,198,255,0.12); color: rgba(233,238,247,0.9); }
-    .badge.lang{ border-color: rgba(255,184,107,0.35); background: rgba(255,184,107,0.12); color: rgba(233,238,247,0.92); }
-
-    .sideStack{ display:flex; flex-direction:column; gap:12px; }
-    .sideBody{ padding:10px 12px; max-height: 320px; overflow:auto; }
-
-    .item{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:10px;
-      margin-bottom:10px;
-      background: rgba(0,0,0,0.12);
-    }
-    .item:last-child{ margin-bottom:0; }
-    .itemTitle{
-      display:flex; flex-wrap:wrap; gap:10px;
-      align-items:center; justify-content:space-between;
-      margin-bottom:8px;
-    }
-    .itemTitle .left{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    }
-    .itemList{
-      font-size:12px; color:var(--muted); line-height:1.55;
-    }
-    .itemLine{
-      padding-top:6px; border-top:1px dashed rgba(255,255,255,0.12);
-      margin-top:6px;
-    }
-    .itemLine:first-child{ border-top:0; margin-top:0; padding-top:0; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; color: rgba(233,238,247,0.92); }
-
-    .btn-mini{
-      border:1px solid var(--line);
-      background:transparent;
-      color:var(--text);
-      padding:5px 8px;
-      border-radius:10px;
-      cursor:pointer;
-      font-size:12px;
-      font-weight:800;
-      white-space:nowrap;
-    }
-    .btn-mini:hover{ background:rgba(255,255,255,0.05); }
-
-    .hide{ display:none !important; }
-    .muted{ color:var(--muted); }
-
-    /* ===== Language Scan UI ===== */
-    .langTop{
-      display:flex; flex-direction:column; gap:10px;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,0.06);
-      background: rgba(0,0,0,0.06);
-    }
-    .langRow{
-      display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center;
-    }
-    .langRow .gtitle{
-      font-size:12px; font-weight:800; color:rgba(170,182,204,0.9);
-      white-space:nowrap;
-    }
-    .chip{
-      display:inline-flex; gap:8px; align-items:center;
-      padding:4px 8px;
-      border:1px solid rgba(255,255,255,0.10);
-      border-radius:999px;
-      background: rgba(0,0,0,0.10);
-      font-size:12px;
-      color:rgba(233,238,247,0.92);
-      white-space:nowrap;
-    }
-    .chip small{ color:rgba(170,182,204,0.95); font-weight:700; }
-    .chip .k{ color:rgba(255,184,107,0.95); font-weight:800; }
-
-    .langAllow{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap:8px 10px;
-      width:100%;
-    }
-    @media (max-width: 1500px){ .langAllow{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-    @media (max-width: 900px){ .langAllow{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    .langAllow label{
-      display:flex; gap:8px; align-items:center;
-      padding:6px 8px;
-      border:1px solid rgba(255,255,255,0.10);
-      border-radius:12px;
-      background: rgba(0,0,0,0.10);
-      cursor:pointer;
-      user-select:none;
-    }
-    .langAllow b{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      color:rgba(255,184,107,0.95);
-      font-weight:900;
-    }
-    .langAllow span{ color:rgba(233,238,247,0.92); font-size:12px; }
-    .langAllow small{ color:rgba(170,182,204,0.95); font-size:11px; margin-left:auto; }
-
-    .miniBtns{ display:flex; gap:8px; flex-wrap:wrap; }
-    .miniBtn{
-      border:1px solid var(--line);
-      background: transparent;
-      color:var(--text);
-      padding:6px 10px;
-      border-radius:10px;
-      cursor:pointer;
-      font-weight:800;
-      font-size:12px;
-      white-space:nowrap;
-    }
-    .miniBtn:hover{ background: rgba(255,255,255,0.05); }
-
-    .langHint{
-      font-size:12px; color:var(--muted); line-height:1.45;
-    }
-
-    .langExcludeWrap{
-      display:flex; gap:8px; align-items:center; flex-wrap:nowrap;
-      padding:6px 8px;
-      border:1px solid rgba(255,255,255,0.10);
-      border-radius:12px;
-      background: rgba(0,0,0,0.10);
-      width:100%;
-    }
-    .langExcludeWrap .exLabel{
-      font-size:12px; color:rgba(170,182,204,0.9); font-weight:800; white-space:nowrap;
-    }
-    .langExcludeInput{
-      flex:1; min-width:0;
-      padding:3px 7px;
-      border:1px solid rgba(255,255,255,0.10);
-      border-radius:8px;
-      background: rgba(0,0,0,0.14);
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+      background: var(--bg);
       color: var(--text);
-      font-size:12px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      outline:none;
-    }
-    .langExcludeInput::placeholder{ color:rgba(170,182,204,0.55); }
-    .langExcludeInput:focus{ border-color:rgba(124,198,255,0.45); background:rgba(124,198,255,0.06); }
-
-    /* ===== 상단 GNB ===== */
-    .gnb{
-      position: sticky;
-      top: 0;
-      z-index: 9999;
-      border-bottom: 1px solid rgba(255,255,255,0.10);
-      background: rgba(10,14,22,0.92);
-      backdrop-filter: blur(10px);
-    }
-    .gnb-inner{
-      max-width: 1750px;
-      margin: 0 auto;
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .gnb-brand{
-      font-weight: 900;
       font-size: 13px;
-      letter-spacing: .2px;
-      color: rgba(233,238,247,0.95);
-      user-select: none;
-    }
-    .gnb-links{
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .gnb a{
-      text-decoration: none;
-      font-weight: 800;
-      font-size: 12px;
-      color: rgba(170,182,204,0.95);
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-    }
-    .gnb a:hover{
-      color: rgba(233,238,247,0.95);
-      background: rgba(255,255,255,0.06);
-    }
-    .gnb a.active{
-      color: rgba(233,238,247,0.98);
-      border-color: rgba(124,198,255,0.45);
-      background: rgba(124,198,255,0.12);
+      line-height: 1.5;
     }
 
+    /* ── NAV ── */
+    .nav {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; gap: 6px;
+      height: 44px; padding: 0 16px;
+      background: rgba(13,17,23,0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand { font-weight: 900; font-size: 13px; color: var(--text); margin-right: 6px; }
+    .nav a {
+      text-decoration: none; font-size: 12px; font-weight: 700;
+      color: var(--muted); padding: 5px 10px;
+      border-radius: 8px; border: 1px solid transparent; transition: .1s;
+    }
+    .nav a:hover { color: var(--text); background: var(--surface2); }
+    .nav a.active {
+      color: var(--accent);
+      border-color: rgba(88,166,255,0.35);
+      background: rgba(88,166,255,0.1);
+    }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; flex-wrap: wrap;
+      background: rgba(255,255,255,0.015);
+      border-bottom: 1px solid var(--border);
+    }
+    .sep { width: 1px; height: 20px; background: var(--border2); margin: 0 2px; }
+
+    /* Action buttons */
+    .btn {
+      display: inline-flex; align-items: center;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text); font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: .1s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.1); }
+    .btn.primary {
+      background: rgba(88,166,255,0.15);
+      border-color: rgba(88,166,255,0.4);
+      color: #79c0ff;
+    }
+    .btn.primary:hover { background: rgba(88,166,255,0.25); }
+    .btn.ghost { background: transparent; }
+    .btn.ghost:hover { background: var(--surface2); }
+
+    /* Mode buttons (radio hidden) */
+    .mode-group {
+      display: flex;
+      border: 1px solid var(--border2);
+      border-radius: 8px; overflow: hidden;
+    }
+    .mode-group label {
+      display: flex; align-items: center;
+      padding: 5px 11px; font-size: 12px; font-weight: 700;
+      color: var(--muted); cursor: pointer; user-select: none;
+      border-right: 1px solid var(--border); transition: .1s;
+    }
+    .mode-group label:last-child { border-right: 0; }
+    .mode-group label.active {
+      background: rgba(88,166,255,0.12); color: #79c0ff;
+    }
+    .mode-group label:not(.active):hover { background: var(--surface2); color: var(--text); }
+    .mode-group input[type="radio"] { display: none; }
+
+    /* Toggle check labels */
+    .chk-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      font-size: 12px; font-weight: 700;
+      cursor: pointer; user-select: none; transition: .1s;
+    }
+    .chk-label input { display: none; }
+    .chk-label.on {
+      border-color: rgba(88,166,255,0.4);
+      background: rgba(88,166,255,0.1);
+      color: #79c0ff;
+    }
+    .chk-label:not(.on):hover { background: var(--surface2); color: var(--text); }
+
+    /* Stat pills */
+    .stat {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 8px; border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px; color: var(--muted);
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .dot.d-total { background: var(--muted); }
+    .dot.d-ph    { background: var(--ph); }
+    .dot.d-num   { background: var(--num); }
+    .dot.d-lang  { background: var(--lang); }
+
+    /* ── MAIN LAYOUT ── */
+    .main {
+      display: grid;
+      grid-template-columns: 540px 1fr;
+      gap: 12px;
+      padding: 12px 16px 32px;
+      max-width: 1900px;
+      margin: 0 auto;
+      align-items: start;
+    }
+    @media (max-width: 1080px) { .main { grid-template-columns: 1fr; } }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .card-head {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px; gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+    .card-title { font-size: 12px; font-weight: 800; }
+    .card-meta  { font-size: 11px; color: var(--muted); }
+
+    /* ── INPUT ── */
+    .input-split {
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+    .input-side { display: flex; flex-direction: column; }
+    .input-side:first-child { border-right: 1px solid var(--border); }
+    .input-label {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 10px; font-size: 11px; font-weight: 700; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%; height: 420px; border: 0; outline: none; resize: vertical;
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.12); color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; line-height: 1.65;
+    }
+    #tsvBox { display: none; }
+    #tsvBox textarea { height: 420px; }
+
+    /* ── RIGHT ── */
+    .right-area { display: flex; flex-direction: column; gap: 10px; }
+
+    /* Results table */
+    .table-wrap { overflow: auto; max-height: 480px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+    thead th {
+      position: sticky; top: 0; z-index: 1;
+      background: rgba(13,17,23,0.98);
+      border-bottom: 1px solid var(--border2);
+      padding: 7px 10px; text-align: left;
+      font-size: 11px; font-weight: 700; color: var(--muted);
+    }
+    tbody td {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      padding: 5px 10px; vertical-align: top;
+    }
+    tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .col-no { width: 130px; }
+    .col-l  { width: 44%; }
+    .col-r  { width: 56%; }
+    .cell {
+      border: 1px solid transparent; border-radius: 7px;
+      padding: 4px 6px; min-height: 22px;
+      white-space: pre-wrap; word-break: break-word;
+      background: rgba(0,0,0,0.06); outline: none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px; line-height: 1.6;
+    }
+    .cell:focus { border-color: rgba(88,166,255,0.5); background: rgba(88,166,255,0.06); }
+    .hl-ph   { box-shadow: inset 0 0 0 2px rgba(210,168,255,0.55); }
+    .hl-num  { box-shadow: inset 0 0 0 2px rgba(88,166,255,0.55); }
+    .hl-lang { box-shadow: inset 0 0 0 2px rgba(255,166,87,0.55); }
+
+    .badge-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .loc { font-family: monospace; font-size: 11px; color: var(--muted); }
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 1px 5px; border-radius: 999px;
+      font-size: 10px; font-weight: 800; border: 1px solid;
+    }
+    .badge.ph  { border-color: rgba(210,168,255,0.4); background: rgba(210,168,255,0.1); color: #d2a8ff; }
+    .badge.num { border-color: rgba(88,166,255,0.4);  background: rgba(88,166,255,0.1);  color: #79c0ff; }
+    .badge.lang{ border-color: rgba(255,166,87,0.4);  background: rgba(255,166,87,0.1);  color: #ffa657; }
+
+    /* ── SIDE PANELS ── */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 1500px) { .panels { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 900px)  { .panels { grid-template-columns: 1fr; } }
+
+    .panel-body {
+      padding: 8px 10px;
+      max-height: 300px; overflow-y: auto;
+      font-size: 12px;
+    }
+
+    /* Language panel */
+    .lang-ctrl {
+      display: flex; flex-direction: column; gap: 7px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,0.05);
+    }
+    .lang-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .lang-lbl { font-size: 11px; font-weight: 800; color: var(--muted); min-width: 28px; }
+
+    /* Scan target toggles */
+    .scan-tog {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 6px;
+      border: 1px solid var(--border); font-size: 11px; font-weight: 700;
+      color: var(--muted); cursor: pointer; user-select: none; transition: .1s;
+    }
+    .scan-tog input { display: none; }
+    .scan-tog.on {
+      border-color: rgba(255,166,87,0.45);
+      background: rgba(255,166,87,0.1);
+      color: #ffa657;
+    }
+
+    /* Preset mini buttons */
+    .mini-btn {
+      padding: 3px 8px; border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      font-size: 11px; font-weight: 700; cursor: pointer; transition: .1s;
+    }
+    .mini-btn:hover { background: var(--surface2); color: var(--text); }
+
+    /* Summary chips */
+    .sum-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px; color: var(--muted);
+    }
+    .sum-chip .k {
+      font-family: monospace; font-weight: 900;
+      color: rgba(255,166,87,0.9); font-size: 10px;
+    }
+
+    /* Allowlist */
+    .allow-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .allow-item {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.1);
+      font-size: 11px; color: var(--muted);
+      cursor: pointer; user-select: none; transition: .1s;
+    }
+    .allow-item input { display: none; }
+    .allow-item .code {
+      font-family: monospace; font-weight: 900;
+      color: rgba(255,166,87,0.75); font-size: 10px;
+    }
+    .allow-item.on {
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+    }
+    .allow-item .c-cnt { font-size: 10px; color: var(--muted); }
+
+    /* Keyword exclusion */
+    .kw-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 8px; border-radius: 7px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.1);
+    }
+    .kw-lbl { font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+    .kw-input {
+      flex: 1; border: 0; outline: none;
+      background: transparent; color: var(--text);
+      font-family: monospace; font-size: 11px;
+    }
+    .kw-input::placeholder { color: rgba(125,133,144,0.5); }
+
+    /* Panel items */
+    .p-item {
+      border: 1px solid var(--border);
+      border-radius: 9px; padding: 7px 8px;
+      margin-bottom: 5px; background: rgba(0,0,0,0.1);
+    }
+    .p-item:last-child { margin-bottom: 0; }
+    .p-head {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 5px;
+    }
+    .p-detail { font-size: 11px; color: var(--muted); line-height: 1.6; }
+    .p-line {
+      padding-top: 3px; border-top: 1px dashed rgba(255,255,255,0.08);
+      margin-top: 3px;
+    }
+    .p-line:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: rgba(230,237,243,0.9); font-size: 11px;
+    }
+    .jump-btn {
+      padding: 2px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer;
+    }
+    .jump-btn:hover { background: var(--surface2); color: var(--text); }
+
+    .empty { color: var(--muted); font-size: 12px; }
+    .hide  { display: none !important; }
+
+    /* Tooltip */
+    [data-tip] { position: relative; }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 7px); left: 50%;
+      transform: translateX(-50%);
+      max-width: 240px; white-space: normal;
+      padding: 6px 9px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(10,14,22,0.97);
+      color: rgba(230,237,243,0.92); font-size: 11px; line-height: 1.45;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none; transition: opacity .1s; z-index: 999;
+    }
+    [data-tip]:hover::after { opacity: 1; }
   </style>
 </head>
-
 <body>
-<nav class="gnb">
-  <div class="gnb-inner">
-    <div class="gnb-brand">TOOLS</div>
-    <div class="gnb-links">
-      <a href="review.html" data-page="review.html">번역 검수</a>
-      <a href="placeholder.html" data-page="placeholder.html">플레이스홀더 도구</a>
-    </div>
-  </div>
+
+<!-- NAV -->
+<nav class="nav">
+  <span class="nav-brand">TOOLS</span>
+  <a href="review.html" data-page="review.html">번역 검수</a>
+  <a href="placeholder.html" data-page="placeholder.html">플레이스홀더</a>
 </nav>
-<header>
-  <h1>번역 검수 도구</h1>
-  <p>원본과 번역을 붙여넣고, 필요한 검사만 켜서 빠르게 오류를 찾으십시오. (멀티셀 지원, TSV 내보내기 지원)</p>
-</header>
 
-<div class="wrap">
-  <div class="toolbar">
-    <div class="tgroup">
-      <span class="gtitle">실행</span>
-      <button id="analyzeBtn" class="hasTip" data-tip="현재 입력을 기준으로, 체크된 검사 항목만 분석합니다.">분석</button>
-      <button id="copyBtn" class="ghost hasTip" data-tip="현재 결과를 TSV 형식으로 클립보드에 복사합니다.">TSV 복사</button>
-      <button id="clearBtn" class="ghost hasTip" data-tip="입력과 결과를 전부 초기화합니다.">초기화</button>
-    </div>
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn primary" id="analyzeBtn">분석</button>
+  <button class="btn ghost"   id="clearBtn">초기화</button>
+  <button class="btn ghost"   id="copyBtn">TSV 복사</button>
 
-    <div class="tgroup">
-      <span class="gtitle">입력 방식</span>
-      <label class="hasTip" data-tip="여러 셀을 한 번에 붙여넣고, 빈 줄이 2줄 이상 연속되는 지점을 셀 경계로 인식합니다. 셀 순서대로 비교합니다.">
-        <input type="radio" name="mode" value="multicell" checked> 멀티셀
-      </label>
-      <label class="hasTip" data-tip="좌측과 우측에 각각 하나의 덩어리(단일 셀)를 붙여넣고 줄 단위로 비교합니다.">
-        <input type="radio" name="mode" value="block"> 단일 덩어리
-      </label>
-      <label class="hasTip" data-tip="한 줄에 '원본 TAB 번역' 형태로 붙여넣는 단문 전용 모드입니다.">
-        <input type="radio" name="mode" value="tsv"> TSV
-      </label>
-    </div>
+  <div class="sep"></div>
 
-    <div class="tgroup">
-      <span class="gtitle">검사</span>
-      <label class="hasTip" data-tip="«…» 또는 <<…>> 형태의 플레이스홀더가 좌우에서 같고, 같은 순서로 존재하는지 확인합니다.">
-        <input type="checkbox" id="checkPlaceholders" /> 플레이스홀더
-      </label>
-      <label class="hasTip" data-tip="각 줄에 포함된 숫자(예: 10, 3, 0 등)를 추출해, 좌우의 숫자 목록이 동일한지 확인합니다.">
-        <input type="checkbox" id="checkNumbers" /> 숫자
-      </label>
-      <label class="hasTip" data-tip="셀 내부 비교에서 빈 줄을 제거합니다. 줄 번호가 밀려서 비교가 어긋나는 상황을 줄이고 싶을 때 사용하십시오.">
-        <input type="checkbox" id="ignoreEmptyLines" /> 빈 줄 무시
-      </label>
-    </div>
-
-    <div class="tgroup">
-      <span class="gtitle">내보내기</span>
-      <label class="hasTip" data-tip="TSV 복사 시 첫 줄에 컬럼명을 함께 넣습니다. (엑셀 붙여넣기 시 편리합니다)">
-        <input type="checkbox" id="tsvHeader" /> TSV 헤더
-      </label>
-    </div>
-
-    <div class="tgroup">
-      <span class="gtitle">통계</span>
-      <span class="pill"><span class="dot info"></span><span id="statTotal">행 0</span></span>
-      <span class="pill"><span class="dot ph"></span><span id="statPh">PH 0</span></span>
-      <span class="pill"><span class="dot num"></span><span id="statNum">NUM 0</span></span>
-      <span class="pill"><span class="dot lang"></span><span id="statLang">LANG 0</span></span>
-    </div>
+  <div class="mode-group">
+    <label data-tip="빈 줄 2개 이상으로 여러 셀을 구분합니다">
+      <input type="radio" name="mode" value="multicell" checked> 멀티셀
+    </label>
+    <label data-tip="좌우 각각 하나의 덩어리를 줄 단위로 비교합니다">
+      <input type="radio" name="mode" value="block"> 단일
+    </label>
+    <label data-tip="원본 TAB 번역 형태의 TSV를 붙여넣습니다">
+      <input type="radio" name="mode" value="tsv"> TSV
+    </label>
   </div>
 
-  <div class="grid">
-    <!-- INPUT -->
-    <div class="card">
-      <div class="card-head">
-        <div class="title">원본 · 번역 입력</div>
-        <div class="meta" id="inputMeta">멀티셀: 셀 사이에 빈 줄 2개 이상을 두십시오</div>
-      </div>
+  <div class="sep"></div>
 
-      <div id="blockBox" class="split2">
-        <div class="sub">
-          <div class="subHead">
-            <span>왼쪽: 원본</span>
-            <small id="leftCount">셀 0</small>
-          </div>
-          <textarea id="leftText" spellcheck="false" placeholder="원본을 붙여넣으십시오.
-멀티셀 모드에서는 셀과 셀 사이를 빈 줄 2개 이상으로 구분하십시오."></textarea>
-        </div>
-        <div class="sub">
-          <div class="subHead">
-            <span>오른쪽: 번역</span>
-            <small id="rightCount">셀 0</small>
-          </div>
-          <textarea id="rightText" spellcheck="false" placeholder="번역을 붙여넣으십시오.
-멀티셀 모드에서는 셀과 셀 사이를 빈 줄 2개 이상으로 구분하십시오."></textarea>
-        </div>
-      </div>
+  <label class="chk-label" id="lbl-ph"    data-tip="«…» 플레이스홀더 일치 검사"><input type="checkbox" id="checkPlaceholders"> PH</label>
+  <label class="chk-label" id="lbl-num"   data-tip="좌우 숫자 목록 일치 검사"><input type="checkbox" id="checkNumbers"> 숫자</label>
+  <label class="chk-label" id="lbl-empty" data-tip="셀 내 빈 줄을 제거하고 비교"><input type="checkbox" id="ignoreEmptyLines"> 빈줄무시</label>
+  <label class="chk-label" id="lbl-hdr"   data-tip="TSV 복사 시 컬럼명 행 포함"><input type="checkbox" id="tsvHeader"> TSV헤더</label>
 
-      <div id="tsvBox" class="hide">
-        <textarea id="tsvInput" spellcheck="false" placeholder="예시(원본 TAB 번역):
-Trade	Handel
-Status Ailment	Statusveränderung"></textarea>
-      </div>
+  <div class="sep"></div>
 
-      <div class="hint">
-        <ol>
-          <li><b>입력 방식</b>을 선택하십시오. 처음이라면 <b>멀티셀</b>을 권장합니다.</li>
-          <li>왼쪽에 <b>원본</b>, 오른쪽에 <b>번역</b>을 붙여넣으십시오.</li>
-          <li>필요한 <b>검사 항목</b>만 켜십시오. (플레이스홀더, 숫자, 숨은 언어)</li>
-          <li><b>분석</b>을 누르십시오.</li>
-          <li>오른쪽 패널에서 항목의 <b>이동</b>을 눌러, 해당 줄로 즉시 점프하십시오.</li>
-        </ol>
-        <div class="subnote">
-          <b>멀티셀 참고</b>: 빈 줄이 2줄 이상 연속되는 지점을 셀 경계로 봅니다. 셀 순서대로 매칭됩니다.<br/>
-          <b>언어(문자) 탐지 참고</b>: “언어 판별”이 아니라 “문자 종류(스크립트)” 기반입니다. 한글/태국어 같은 숨은 문자는 매우 정확히 잡힙니다.
-        </div>
-      </div>
-    </div>
-
-    <!-- OUTPUT -->
-    <div class="rightWrap">
-      <div class="card">
-        <div class="card-head">
-          <div class="title">비교 결과</div>
-          <div class="meta muted">보라: PH · 하늘색: 숫자 · 주황: 숨은 문자</div>
-        </div>
-        <div class="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th class="colNo">위치</th>
-                <th class="colL">왼쪽(원본)</th>
-                <th class="colR">오른쪽(번역)</th>
-              </tr>
-            </thead>
-            <tbody id="tbody">
-              <tr><td colspan="3" class="muted" style="padding:12px 10px;">분석을 누르시면 결과가 표시됩니다.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="sideStack">
-        <!-- Language Scan -->
-        <div class="card">
-          <div class="card-head">
-            <div class="title">숨은 언어(문자) 찾기</div>
-            <div class="meta" id="langMeta">0행</div>
-          </div>
-
-          <div class="langTop">
-            <div class="langRow">
-              <span class="gtitle">요약</span>
-              <span class="chip"><span class="k">KOR</span> <small>한글</small> <span id="sumKOR">0</span></span>
-              <span class="chip"><span class="k">THA</span> <small>태국어</small> <span id="sumTHA">0</span></span>
-              <span class="chip"><span class="k">LAT</span> <small>라틴</small> <span id="sumLAT">0</span></span>
-            </div>
-
-            <div class="langRow">
-              <span class="gtitle">대상</span>
-              <label class="hasTip" data-tip="왼쪽(원본)에서도 숨은 문자를 찾습니다. (기본 꺼짐)">
-                <input type="checkbox" id="scanLeft" /> 왼쪽
-              </label>
-              <label class="hasTip" data-tip="오른쪽(번역)에서도 숨은 문자를 찾습니다. (기본 꺼짐)">
-                <input type="checkbox" id="scanRight" /> 오른쪽
-              </label>
-              <span class="langHint">대상이 꺼져 있으면 숨은 문자 탐지를 하지 않습니다.</span>
-            </div>
-
-            <div class="langRow">
-              <span class="gtitle">허용 문자</span>
-              <div class="miniBtns">
-                <button class="miniBtn hasTip" id="presetAll" data-tip="모든 문자를 허용합니다. (숨은 문자 경고를 사실상 끕니다)">전체 허용</button>
-                <button class="miniBtn hasTip" id="presetLatTha" data-tip="LAT+THA만 허용합니다. 숨은 한글(KOR) 등을 찾을 때 가장 많이 씁니다.">LAT+THA만</button>
-                <button class="miniBtn hasTip" id="presetLatOnly" data-tip="LAT만 허용합니다. 태국어/한글 등 다른 문자가 섞였는지 찾을 때 사용하십시오.">LAT만</button>
-              </div>
-            </div>
-
-            <div class=”langAllow” id=”langAllowList”></div>
-
-            <div class=”langExcludeWrap”>
-              <span class=”exLabel”>키워드 예외</span>
-              <input type=”text” id=”langExcludeInput” class=”langExcludeInput”
-                placeholder=”Lv, CL, HP … (콤마로 구분)” spellcheck=”false” autocomplete=”off” />
-            </div>
-
-            <div class=”langHint”>
-              - 위에서 체크된 항목만 “허용”입니다.<br/>
-              - 허용되지 않은 문자가 발견되면 아래 목록에 위치(S/L)로 표시됩니다.<br/>
-              - <b>키워드 예외</b>: 비허용 언어여도 입력된 단어는 검사에서 제외합니다. (콤마로 구분, 대소문자 구분)
-            </div>
-          </div>
-
-          <div class="sideBody" id="langBody">
-            <div class="muted">대상(왼쪽/오른쪽)을 켜고 분석하시면, 허용 외 문자가 포함된 줄이 표시됩니다.</div>
-          </div>
-        </div>
-
-        <!-- Placeholder Panel -->
-        <div class="card">
-          <div class="card-head">
-            <div class="title">플레이스홀더 오류</div>
-            <div class="meta" id="phMeta">0</div>
-          </div>
-          <div class="sideBody" id="phBody">
-            <div class="muted">플레이스홀더 검사를 켜고 분석하시면 결과가 표시됩니다.</div>
-          </div>
-        </div>
-
-        <!-- Number Panel -->
-        <div class="card">
-          <div class="card-head">
-            <div class="title">숫자 오류</div>
-            <div class="meta" id="numMeta">0</div>
-          </div>
-          <div class="sideBody" id="numBody">
-            <div class="muted">숫자 검사를 켜고 분석하시면 결과가 표시됩니다.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <span class="stat"><span class="dot d-total"></span><span id="statTotal">행 0</span></span>
+  <span class="stat"><span class="dot d-ph"></span><span id="statPh">PH 0</span></span>
+  <span class="stat"><span class="dot d-num"></span><span id="statNum">NUM 0</span></span>
+  <span class="stat"><span class="dot d-lang"></span><span id="statLang">LANG 0</span></span>
 </div>
 
+<!-- MAIN -->
+<div class="main">
+
+  <!-- INPUT -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">입력</span>
+      <span class="card-meta" id="inputMeta">멀티셀 · 셀 사이 빈 줄 2개 이상</span>
+    </div>
+
+    <div id="blockBox">
+      <div class="input-split">
+        <div class="input-side">
+          <div class="input-label"><span>원본</span><span id="leftCount"></span></div>
+          <textarea id="leftText"  spellcheck="false" placeholder="원본을 붙여넣으십시오.&#10;멀티셀: 셀 사이를 빈 줄 2개 이상으로 구분하십시오."></textarea>
+        </div>
+        <div class="input-side">
+          <div class="input-label"><span>번역</span><span id="rightCount"></span></div>
+          <textarea id="rightText" spellcheck="false" placeholder="번역을 붙여넣으십시오."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div id="tsvBox">
+      <textarea id="tsvInput" spellcheck="false" placeholder="원본&#9;번역&#10;Trade&#9;Handel&#10;..."></textarea>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-area">
+
+    <!-- Results -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">비교 결과</span>
+        <span class="card-meta">
+          <span style="color:var(--ph)">■</span> PH &nbsp;
+          <span style="color:var(--num)">■</span> 숫자 &nbsp;
+          <span style="color:var(--lang)">■</span> 숨은 문자
+        </span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-no">위치</th>
+              <th class="col-l">원본</th>
+              <th class="col-r">번역</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="3" class="empty" style="padding:14px 12px">내용을 입력하면 자동으로 분석됩니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Side panels -->
+    <div class="panels">
+
+      <!-- Language -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">숨은 문자 탐지</span>
+          <span class="card-meta" id="langMeta">0행</span>
+        </div>
+        <div class="lang-ctrl">
+
+          <!-- 대상 + 요약 -->
+          <div class="lang-row">
+            <span class="lang-lbl">대상</span>
+            <label class="scan-tog" id="st-l"><input type="checkbox" id="scanLeft">왼쪽</label>
+            <label class="scan-tog" id="st-r"><input type="checkbox" id="scanRight">오른쪽</label>
+            <span class="sum-chip"><span class="k">KOR</span><span id="sumKOR">0</span></span>
+            <span class="sum-chip"><span class="k">THA</span><span id="sumTHA">0</span></span>
+            <span class="sum-chip"><span class="k">LAT</span><span id="sumLAT">0</span></span>
+          </div>
+
+          <!-- 허용 프리셋 -->
+          <div class="lang-row">
+            <span class="lang-lbl">허용</span>
+            <button class="mini-btn" id="presetAll"     data-tip="모든 문자 허용 (경고 해제)">전체</button>
+            <button class="mini-btn" id="presetLatTha"  data-tip="LAT+THA만 허용, 숨은 한글 탐지에 적합">LAT+THA</button>
+            <button class="mini-btn" id="presetLatOnly" data-tip="LAT만 허용">LAT만</button>
+          </div>
+
+          <!-- 허용 목록 -->
+          <div class="allow-list" id="langAllowList"></div>
+
+          <!-- 키워드 예외 -->
+          <div class="kw-row">
+            <span class="kw-lbl">예외</span>
+            <input class="kw-input" id="langExcludeInput" type="text"
+              placeholder="Lv, CL, HP … (콤마로 구분)"
+              spellcheck="false" autocomplete="off">
+          </div>
+
+        </div>
+        <div class="panel-body" id="langBody">
+          <span class="empty">대상(왼쪽/오른쪽)을 체크하면 탐지를 시작합니다.</span>
+        </div>
+      </div>
+
+      <!-- PH -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">플레이스홀더 오류</span>
+          <span class="card-meta" id="phMeta">0</span>
+        </div>
+        <div class="panel-body" id="phBody">
+          <span class="empty">PH 검사를 켜고 분석하면 결과가 표시됩니다.</span>
+        </div>
+      </div>
+
+      <!-- NUM -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">숫자 오류</span>
+          <span class="card-meta" id="numMeta">0</span>
+        </div>
+        <div class="panel-body" id="numBody">
+          <span class="empty">숫자 검사를 켜고 분석하면 결과가 표시됩니다.</span>
+        </div>
+      </div>
+
+    </div><!-- /panels -->
+  </div><!-- /right-area -->
+
+</div><!-- /main -->
+
 <script>
-  const $ = (id) => document.getElementById(id);
-
-  const analyzeBtn = $("analyzeBtn");
-  const clearBtn = $("clearBtn");
-  const copyBtn = $("copyBtn");
-
-  const leftText = $("leftText");
-  const rightText = $("rightText");
-  const leftCount = $("leftCount");
-  const rightCount = $("rightCount");
-
-  const tsvBox = $("tsvBox");
-  const tsvInput = $("tsvInput");
-  const blockBox = $("blockBox");
-
-  const inputMeta = $("inputMeta");
-
-  // Default: ALL OFF
-  const checkPlaceholders = $("checkPlaceholders");
-  const checkNumbers = $("checkNumbers");
-  const ignoreEmptyLines = $("ignoreEmptyLines");
-  const tsvHeader = $("tsvHeader");
-
-  const statTotal = $("statTotal");
-  const statPh = $("statPh");
-  const statNum = $("statNum");
-  const statLang = $("statLang");
-
-  const tbody = $("tbody");
-  const phBody = $("phBody");
-  const phMeta = $("phMeta");
-  const numBody = $("numBody");
-  const numMeta = $("numMeta");
-
-  // Language
-  const langBody = $("langBody");
-  const langMeta = $("langMeta");
-  const langAllowList = $("langAllowList");
-  const scanLeft = $("scanLeft");
-  const scanRight = $("scanRight");
-  const presetAll = $("presetAll");
-  const presetLatTha = $("presetLatTha");
-  const presetLatOnly = $("presetLatOnly");
-  const sumKOR = $("sumKOR");
-  const sumTHA = $("sumTHA");
-  const sumLAT = $("sumLAT");
-  const langExcludeInput = $("langExcludeInput");
-
-  // enforce defaults OFF
-  checkPlaceholders.checked = false;
-  checkNumbers.checked = false;
-  ignoreEmptyLines.checked = false;
-  tsvHeader.checked = false;
-  scanLeft.checked = false;
-  scanRight.checked = false;
-
-  let rows = [];
-  let rowElByKey = new Map();
-
-  const SCRIPT_CATALOG = [
-    { code:"KOR", name:"한국어(한글)", note:"Hangul", tip:"한글이 포함되어 있으면 발견됩니다." },
-    { code:"THA", name:"태국어", note:"Thai", tip:"태국 문자(Thai block)가 포함되어 있으면 발견됩니다." },
-    { code:"LAT", name:"라틴(영어/독일어 등)", note:"Latin", tip:"영어/독일어 등 라틴 문자 기반 텍스트입니다." },
-    { code:"JPN", name:"일본어(가나)", note:"Kana", tip:"히라가나/가타카나가 포함되어 있으면 발견됩니다." },
-    { code:"CJK", name:"한자(중국어 등)", note:"Han", tip:"한자 계열 문자가 포함되어 있으면 발견됩니다." },
-    { code:"CYR", name:"키릴(러시아어 등)", note:"Cyrillic", tip:"키릴 문자가 포함되어 있으면 발견됩니다." },
-    { code:"ARB", name:"아랍 문자", note:"Arabic", tip:"아랍 문자 블록이 포함되어 있으면 발견됩니다." },
-    { code:"DEV", name:"데바나가리(힌디어 등)", note:"Devanagari", tip:"데바나가리 문자가 포함되어 있으면 발견됩니다." },
-    { code:"ETC", name:"기타 문자", note:"Other", tip:"위 분류에 속하지 않는 문자(이모지 등)가 포함되면 잡힙니다." },
-  ];
-
-  const langState = {
-    allow: new Set(SCRIPT_CATALOG.map(x => x.code)), // 기본: 전체 허용
-    initializedUI: false,
-  };
-
-  function getMode(){
-    const el = document.querySelector('input[name="mode"]:checked');
-    return el ? el.value : "multicell";
-  }
-
-  function escapeHtml(s){
-    return (s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function sanitizeForTSV(s){
-    return (s ?? "").replace(/\t/g, " ").replace(/\r?\n/g, "\\n").trim();
-  }
-
-  // ===== PLACEHOLDER =====
-  function extractPlaceholders(text){
-    const t = text ?? "";
-    const out = [];
-    const re = /«[^»]*»|<<[\s\S]*?>>/g;
-    let m;
-    while ((m = re.exec(t)) !== null) out.push(m[0]);
-    return out;
-  }
-  function normPlaceholder(ph){
-    return (ph ?? "").normalize("NFC").replace(/\s+/g, " ").trim();
-  }
-  function checkPlaceholderMismatch(leftLine, rightLine){
-    const leftPH = extractPlaceholders(leftLine);
-    const rightPH = extractPlaceholders(rightLine);
-    const leftN = leftPH.map(normPlaceholder);
-    const rightN = rightPH.map(normPlaceholder);
-
-    const issues = [];
-
-    for (let i = 0; i < leftPH.length; i++){
-      const lp = leftPH[i];
-      const ln = leftN[i];
-
-      if (i >= rightPH.length){
-        const movedTo = rightN.indexOf(ln);
-        issues.push({ type: movedTo >= 0 ? "moved" : "missing_right", index:i, left:lp, right:null, movedTo });
-        continue;
-      }
-
-      const rp = rightPH[i];
-      const rn = rightN[i];
-
-      if (ln !== rn){
-        const movedTo = rightN.indexOf(ln);
-        issues.push({ type: movedTo >= 0 ? "different_or_moved" : "different", index:i, left:lp, right:rp, movedTo });
-      }
-    }
-
-    if (rightPH.length > leftPH.length){
-      for (let j = leftPH.length; j < rightPH.length; j++){
-        issues.push({ type:"extra_right", index:j, left:null, right:rightPH[j], movedTo:null });
-      }
-    }
-    return issues;
-  }
-
-  // ===== NUMBERS =====
-  function extractDigits(text){
-    const m = (text ?? "").match(/\d+/g);
-    return m ? m : [];
-  }
-  function arraysEqual(a,b){
-    if (a.length !== b.length) return false;
-    for (let i=0;i<a.length;i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
-
-  // ===== LINE UTILS =====
-  function splitLines(text){
-    const arr = (text ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
-    return ignoreEmptyLines.checked ? arr.filter(x => x.trim() !== "") : arr;
-  }
-
-  // ===== MULTICELL SPLIT =====
-  function splitCellsByBlankGaps(text){
-    const t = (text ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
-    const rawLines = t.split("\n");
-
-    const cells = [];
-    let cur = [];
-    let blankRun = 0;
-
-    function pushCell(){
-      const joined = cur.join("\n").trimEnd();
-      if (joined.trim() !== "") cells.push(joined);
-      cur = [];
-    }
-
-    for (let i=0;i<rawLines.length;i++){
-      const line = rawLines[i];
-      const isBlank = line.trim() === "";
-
-      if (isBlank){
-        blankRun++;
-        if (blankRun >= 2){
-          pushCell();
-          continue;
-        } else {
-          cur.push(line);
-          continue;
-        }
-      } else {
-        blankRun = 0;
-        cur.push(line);
-      }
-    }
-    pushCell();
-    return cells;
-  }
-
-  // ===== TSV PARSE =====
-  function parseTSV(text){
-    const lines = (text ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
-    const out = [];
-    let no = 1;
-    for (const line of lines){
-      if (line.trim() === "") { no++; continue; }
-      if (line.includes("\t")){
-        const parts = line.split("\t");
-        const left = parts[0] ?? "";
-        const right = parts.slice(1).join("\t");
-        out.push({ key:`S1-L${no}`, cell:1, line:no, left, right });
-      }
-      no++;
-    }
-    return out;
-  }
-
-  // ===== BUILD ROWS =====
-  function buildRows(){
-    const mode = getMode();
-
-    if (mode === "tsv"){
-      const r = parseTSV(tsvInput.value || "");
-      leftCount.textContent = "셀 -";
-      rightCount.textContent = "셀 -";
-      return { rows: r, cellPairs: [[(tsvInput.value||""), (tsvInput.value||"")]] };
-    }
-
-    if (mode === "block"){
-      const L = splitLines(leftText.value || "");
-      const R = splitLines(rightText.value || "");
-      const max = Math.max(L.length, R.length);
-      const out = [];
-      for (let i=0;i<max;i++){
-        out.push({
-          key:`S1-L${i+1}`,
-          cell:1,
-          line:i+1,
-          left: i < L.length ? L[i] : "",
-          right: i < R.length ? R[i] : ""
-        });
-      }
-      leftCount.textContent = "셀 1";
-      rightCount.textContent = "셀 1";
-      return { rows: out, cellPairs: [[leftText.value||"", rightText.value||""]] };
-    }
-
-    const Lcells = splitCellsByBlankGaps(leftText.value || "");
-    const Rcells = splitCellsByBlankGaps(rightText.value || "");
-    leftCount.textContent = `셀 ${Lcells.length}`;
-    rightCount.textContent = `셀 ${Rcells.length}`;
-
-    const maxCells = Math.max(Lcells.length, Rcells.length);
-    const out = [];
-    const cellPairs = [];
-
-    for (let c=0;c<maxCells;c++){
-      const lCell = (c < Lcells.length) ? Lcells[c] : "";
-      const rCell = (c < Rcells.length) ? Rcells[c] : "";
-      cellPairs.push([lCell, rCell]);
-
-      const LL = splitLines(lCell);
-      const RR = splitLines(rCell);
-      const maxLines = Math.max(LL.length, RR.length);
-
-      for (let i=0;i<maxLines;i++){
-        out.push({
-          key:`S${c+1}-L${i+1}`,
-          cell:c+1,
-          line:i+1,
-          left: i < LL.length ? LL[i] : "",
-          right: i < RR.length ? RR[i] : ""
-        });
-      }
-    }
-
-    return { rows: out, cellPairs };
-  }
-
-  // ===== Language Scan =====
-  function isAsciiDigit(cp){ return cp >= 0x30 && cp <= 0x39; }
-  function isAsciiSpace(cp){ return cp === 0x20 || cp === 0x09 || cp === 0x0A || cp === 0x0D; }
-  function isCommonPunct(cp){
-    return (cp >= 0x21 && cp <= 0x2F) ||
-           (cp >= 0x3A && cp <= 0x40) ||
-           (cp >= 0x5B && cp <= 0x60) ||
-           (cp >= 0x7B && cp <= 0x7E);
-  }
-
-  function scriptOfCodePoint(cp){
-    if ((cp >= 0x1100 && cp <= 0x11FF) || (cp >= 0x3130 && cp <= 0x318F) ||
-        (cp >= 0xAC00 && cp <= 0xD7AF) || (cp >= 0xA960 && cp <= 0xA97F) ||
-        (cp >= 0xD7B0 && cp <= 0xD7FF)) return "KOR";
-
-    if (cp >= 0x0E00 && cp <= 0x0E7F) return "THA";
-
-    if (cp >= 0x3040 && cp <= 0x309F) return "JPN";
-    if (cp >= 0x30A0 && cp <= 0x30FF) return "JPN";
-    if (cp >= 0x31F0 && cp <= 0x31FF) return "JPN";
-
-    if ((cp >= 0x4E00 && cp <= 0x9FFF) || (cp >= 0x3400 && cp <= 0x4DBF)) return "CJK";
-
-    if ((cp >= 0x0400 && cp <= 0x04FF) || (cp >= 0x0500 && cp <= 0x052F) ||
-        (cp >= 0x2DE0 && cp <= 0x2DFF) || (cp >= 0xA640 && cp <= 0xA69F)) return "CYR";
-
-    if ((cp >= 0x0600 && cp <= 0x06FF) || (cp >= 0x0750 && cp <= 0x077F) ||
-        (cp >= 0x08A0 && cp <= 0x08FF)) return "ARB";
-
-    if (cp >= 0x0900 && cp <= 0x097F) return "DEV";
-
-    if ((cp >= 0x41 && cp <= 0x5A) || (cp >= 0x61 && cp <= 0x7A) ||
-        (cp >= 0x00C0 && cp <= 0x024F) || (cp >= 0x1E00 && cp <= 0x1EFF) ||
-        (cp >= 0x2C60 && cp <= 0x2C7F) || (cp >= 0xA720 && cp <= 0xA7FF)) return "LAT";
-
-    if (isAsciiSpace(cp) || isAsciiDigit(cp) || isCommonPunct(cp)) return null;
-    return "ETC";
-  }
-
-  function scanScriptsInText(text){
-    const counts = new Map();
-    const firstHit = new Map();
-    const t = text ?? "";
-    for (let i=0; i<t.length; ){
-      const cp = t.codePointAt(i);
-      const ch = String.fromCodePoint(cp);
-      const code = scriptOfCodePoint(cp);
-
-      if (code){
-        counts.set(code, (counts.get(code)||0) + 1);
-        if (!firstHit.has(code)){
-          const start = Math.max(0, i - 12);
-          const end = Math.min(t.length, i + 12);
-          const snippet = t.slice(start, end);
-          firstHit.set(code, { idx:i, snippet, ch });
-        }
-      }
-      i += ch.length;
-    }
-    return { counts, firstHit };
-  }
-
-  function addCounts(targetMap, addMap){
-    for (const [k,v] of addMap.entries()){
-      targetMap.set(k, (targetMap.get(k)||0) + v);
-    }
-  }
-
-  function codesToLabel(code){
-    const found = SCRIPT_CATALOG.find(x=>x.code===code);
-    return found ? `[${found.code}] ${found.name}` : `[${code}]`;
-  }
-
-  function buildLangAllowUI(){
-    if (langState.initializedUI) return;
-    langAllowList.innerHTML = "";
-
-    for (const s of SCRIPT_CATALOG){
-      const id = `allow_${s.code}`;
-      const lab = document.createElement("label");
-      lab.className = "hasTip";
-      lab.setAttribute("data-tip", s.tip);
-
-      // allow 체크는 기본값: 전체 허용(체크된 상태)
-      lab.innerHTML = `
-        <input type="checkbox" id="${id}" data-code="${s.code}" ${langState.allow.has(s.code) ? "checked":""}/>
-        <div style="display:flex; align-items:center; gap:8px; width:100%;">
-          <b>${s.code}</b>
-          <span>${s.name}</span>
-          <small id="cnt_${s.code}">0</small>
-        </div>
-      `;
-      langAllowList.appendChild(lab);
-    }
-
-    langAllowList.querySelectorAll('input[type="checkbox"][data-code]').forEach(chk=>{
-      chk.addEventListener("change", ()=>{
-        const code = chk.getAttribute("data-code");
-        if (chk.checked) langState.allow.add(code);
-        else langState.allow.delete(code);
-
-        const hasData = (getMode()==="tsv" && tsvInput.value.trim()) ||
-                        (getMode()!=="tsv" && (leftText.value.trim() || rightText.value.trim()));
-        if (hasData) analyzeAndRender();
-      });
-    });
-
-    langState.initializedUI = true;
-  }
-
-  function applyPreset(setCodes){
-    langState.allow = new Set(setCodes);
-    langAllowList.querySelectorAll('input[type="checkbox"][data-code]').forEach(chk=>{
-      const code = chk.getAttribute("data-code");
-      chk.checked = langState.allow.has(code);
-    });
-    const hasData = (getMode()==="tsv" && tsvInput.value.trim()) ||
-                    (getMode()!=="tsv" && (leftText.value.trim() || rightText.value.trim()));
-    if (hasData) analyzeAndRender();
-  }
-
-  // ===== KEYWORD EXCLUSION =====
-  function getExcludeKeywords(){
-    return (langExcludeInput.value || "")
-      .split(",")
-      .map(k => k.trim())
-      .filter(k => k.length > 0);
-  }
-
-  function applyKeywordExclusions(text, keywords){
-    if (!keywords.length) return text;
-    let result = text;
-    for (const kw of keywords){
-      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      result = result.replace(new RegExp(escaped, "g"), "");
-    }
-    return result;
-  }
-
-  // ===== ANALYZE =====
-  function analyzeRows(snapshotRows){
-    const phIssues = new Map();
-    const numIssues = new Map();
-
-    const langIssues = new Map();
-    const totalAll = new Map();
-
-    const doLeft = scanLeft.checked;
-    const doRight = scanRight.checked;
-
-    for (const r of snapshotRows){
-      if (checkPlaceholders.checked){
-        const issues = checkPlaceholderMismatch(r.left, r.right);
-        if (issues.length > 0) phIssues.set(r.key, issues);
-      }
-      if (checkNumbers.checked){
-        const lNums = extractDigits(r.left);
-        const rNums = extractDigits(r.right);
-        if (!arraysEqual(lNums, rNums)) numIssues.set(r.key, { lNums, rNums });
-      }
-
-      // Language scan only if scope is enabled
-      if (doLeft || doRight){
-        const excludeKws  = getExcludeKeywords();
-        const leftForScan  = applyKeywordExclusions(r.left,  excludeKws);
-        const rightForScan = applyKeywordExclusions(r.right, excludeKws);
-        const leftScan  = doLeft  ? scanScriptsInText(leftForScan)  : { counts:new Map(), firstHit:new Map() };
-        const rightScan = doRight ? scanScriptsInText(rightForScan) : { counts:new Map(), firstHit:new Map() };
-
-        addCounts(totalAll, leftScan.counts);
-        addCounts(totalAll, rightScan.counts);
-
-        const disLeft = [];
-        const disRight = [];
-
-        for (const [code, cnt] of leftScan.counts.entries()){
-          if (!langState.allow.has(code)){
-            const hit = leftScan.firstHit.get(code);
-            disLeft.push({ code, cnt, hit });
-          }
-        }
-        for (const [code, cnt] of rightScan.counts.entries()){
-          if (!langState.allow.has(code)){
-            const hit = rightScan.firstHit.get(code);
-            disRight.push({ code, cnt, hit });
-          }
-        }
-
-        if (disLeft.length || disRight.length){
-          disLeft.sort((a,b)=>b.cnt-a.cnt);
-          disRight.sort((a,b)=>b.cnt-a.cnt);
-          langIssues.set(r.key, {
-            cell:r.cell, line:r.line,
-            left: disLeft.slice(0, 3),
-            right: disRight.slice(0, 3),
-            leftAll: disLeft,
-            rightAll: disRight,
-          });
-        }
-      }
-    }
-
-    return { phIssues, numIssues, langIssues, totalAll };
-  }
-
-  function updateStats(snapshotRows, analysis){
-    statTotal.textContent = `행 ${snapshotRows.length.toLocaleString()}`;
-    statPh.textContent = `PH ${analysis.phIssues.size.toLocaleString()}`;
-    statNum.textContent = `NUM ${analysis.numIssues.size.toLocaleString()}`;
-    statLang.textContent = `LANG ${analysis.langIssues.size.toLocaleString()}`;
-
-    phMeta.textContent = `${analysis.phIssues.size.toLocaleString()}`;
-    numMeta.textContent = `${analysis.numIssues.size.toLocaleString()}`;
-    langMeta.textContent = `${analysis.langIssues.size.toLocaleString()}행`;
-
-    const kor = analysis.totalAll.get("KOR") || 0;
-    const tha = analysis.totalAll.get("THA") || 0;
-    const lat = analysis.totalAll.get("LAT") || 0;
-    sumKOR.textContent = kor.toLocaleString();
-    sumTHA.textContent = tha.toLocaleString();
-    sumLAT.textContent = lat.toLocaleString();
-
-    for (const s of SCRIPT_CATALOG){
-      const el = document.getElementById(`cnt_${s.code}`);
-      if (el) el.textContent = (analysis.totalAll.get(s.code) || 0).toLocaleString();
-    }
-  }
-
-  // ===== RENDER TABLE =====
-  function renderTable(snapshotRows, analysis){
-    tbody.innerHTML = "";
-    rowElByKey.clear();
-
-    for (const r of snapshotRows){
-      const hasPh = analysis.phIssues.has(r.key);
-      const hasNum = analysis.numIssues.has(r.key);
-      const hasLang = analysis.langIssues.has(r.key);
-
-      const tr = document.createElement("tr");
-
-      const tdNo = document.createElement("td");
-      tdNo.className = "colNo";
-      const badgeRow = document.createElement("div");
-      badgeRow.className = "badgeRow";
-
-      const label = document.createElement("span");
-      label.textContent = `S${r.cell} / L${r.line}`;
-      badgeRow.appendChild(label);
-
-      if (hasPh){
-        const b = document.createElement("span");
-        b.className = "badge ph";
-        b.innerHTML = `<b>PH</b><span>${analysis.phIssues.get(r.key).length}건</span>`;
-        badgeRow.appendChild(b);
-      }
-      if (hasNum){
-        const b = document.createElement("span");
-        b.className = "badge num";
-        b.innerHTML = `<b>NUM</b><span>불일치</span>`;
-        badgeRow.appendChild(b);
-      }
-      if (hasLang){
-        const det = analysis.langIssues.get(r.key);
-        const cnt = (det.leftAll?.length||0) + (det.rightAll?.length||0);
-        const b = document.createElement("span");
-        b.className = "badge lang";
-        b.innerHTML = `<b>LANG</b><span>${cnt}종</span>`;
-        badgeRow.appendChild(b);
-      }
-
-      tdNo.appendChild(badgeRow);
-      tr.appendChild(tdNo);
-
-      const tdL = document.createElement("td");
-      tdL.className = "colL";
-      const leftCell = document.createElement("div");
-      leftCell.className = "cell"
-        + (hasPh ? " hl-ph" : "")
-        + (hasNum ? " hl-num" : "")
-        + (hasLang ? " hl-lang" : "");
-      leftCell.contentEditable = "true";
-      leftCell.spellcheck = false;
-      leftCell.textContent = r.left ?? "";
-      tdL.appendChild(leftCell);
-      tr.appendChild(tdL);
-
-      const tdR = document.createElement("td");
-      tdR.className = "colR";
-      const rightCell = document.createElement("div");
-      rightCell.className = "cell"
-        + (hasPh ? " hl-ph" : "")
-        + (hasNum ? " hl-num" : "")
-        + (hasLang ? " hl-lang" : "");
-      rightCell.contentEditable = "true";
-      rightCell.spellcheck = false;
-      rightCell.textContent = r.right ?? "";
-      tdR.appendChild(rightCell);
-      tr.appendChild(tdR);
-
-      tbody.appendChild(tr);
-      rowElByKey.set(r.key, { tr, leftEl:leftCell, rightEl:rightCell });
-    }
-
-    tbody.querySelectorAll(".cell").forEach(cell => {
-      cell.addEventListener("keydown", (e) => {
-        if (e.key === "Enter"){
-          e.preventDefault();
-          cell.blur();
-        }
-      });
-    });
-  }
-
-  function renderPHPanel(analysis){
-    if (!checkPlaceholders.checked){
-      phBody.innerHTML = `<div class="muted">플레이스홀더 검사가 꺼져 있습니다.</div>`;
-      return;
-    }
-    const items = [...analysis.phIssues.entries()];
-    if (items.length === 0){
-      phBody.innerHTML = `<div class="muted">플레이스홀더 오류가 발견되지 않았습니다.</div>`;
-      return;
-    }
-    items.sort((a,b)=>{
-      const pa = a[0].match(/S(\d+)-L(\d+)/); const pb = b[0].match(/S(\d+)-L(\d+)/);
-      const as = pa?Number(pa[1]):0, al=pa?Number(pa[2]):0;
-      const bs = pb?Number(pb[1]):0, bl=pb?Number(pb[2]):0;
-      return (as-bs) || (al-bl);
-    });
-
-    let html = "";
-    for (const [key, issues] of items){
-      const m = key.match(/S(\d+)-L(\d+)/);
-      const s = m ? Number(m[1]) : 1;
-      const l = m ? Number(m[2]) : 1;
-
-      const detail = issues.map(it=>{
-        const idx = it.index + 1;
-        if (it.type === "missing_right") return `<div class="itemLine"><div class="muted">#${idx} 오른쪽 없음</div><div class="mono">left=${escapeHtml(it.left)}</div></div>`;
-        if (it.type === "moved") return `<div class="itemLine"><div class="muted">#${idx} 위치 다름</div><div class="mono">left=${escapeHtml(it.left)}</div><div class="muted">right 위치=${it.movedTo+1}</div></div>`;
-        if (it.type === "different") return `<div class="itemLine"><div class="muted">#${idx} 내용 다름</div><div class="mono">left=${escapeHtml(it.left)}</div><div class="mono">right=${escapeHtml(it.right)}</div></div>`;
-        if (it.type === "different_or_moved") return `<div class="itemLine"><div class="muted">#${idx} 내용 다름 또는 이동</div><div class="mono">left=${escapeHtml(it.left)}</div><div class="mono">right(같은위치)=${escapeHtml(it.right)}</div><div class="muted">right 위치=${it.movedTo+1}</div></div>`;
-        if (it.type === "extra_right") return `<div class="itemLine"><div class="muted">#${idx} 오른쪽 추가</div><div class="mono">right=${escapeHtml(it.right)}</div></div>`;
-        return "";
-      }).join("");
-
-      html += `
-        <div class="item">
-          <div class="itemTitle">
-            <div class="left">
-              <span>S${s}/L${l}</span>
-              <span class="badge ph"><b>PH</b><span>${issues.length}건</span></span>
-            </div>
-            <button class="btn-mini" data-jump="${key}">이동</button>
-          </div>
-          <div class="itemList">${detail}</div>
-        </div>
-      `;
-    }
-
-    phBody.innerHTML = html;
-
-    phBody.querySelectorAll("button[data-jump]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const key = btn.getAttribute("data-jump");
-        const obj = rowElByKey.get(key);
-        if (!obj) return;
-        obj.tr.scrollIntoView({behavior:"smooth", block:"center"});
-        obj.rightEl.focus();
-      });
-    });
-  }
-
-  function renderNumPanel(analysis){
-    if (!checkNumbers.checked){
-      numBody.innerHTML = `<div class="muted">숫자 검사가 꺼져 있습니다.</div>`;
-      return;
-    }
-    const items = [...analysis.numIssues.entries()];
-    if (items.length === 0){
-      numBody.innerHTML = `<div class="muted">숫자 오류가 발견되지 않았습니다.</div>`;
-      return;
-    }
-    items.sort((a,b)=>{
-      const pa = a[0].match(/S(\d+)-L(\d+)/); const pb = b[0].match(/S(\d+)-L(\d+)/);
-      const as = pa?Number(pa[1]):0, al=pa?Number(pa[2]):0;
-      const bs = pb?Number(pb[1]):0, bl=pb?Number(pb[2]):0;
-      return (as-bs) || (al-bl);
-    });
-
-    let html = "";
-    for (const [key, info] of items){
-      const m = key.match(/S(\d+)-L(\d+)/);
-      const s = m ? Number(m[1]) : 1;
-      const l = m ? Number(m[2]) : 1;
-
-      html += `
-        <div class="item">
-          <div class="itemTitle">
-            <div class="left">
-              <span>S${s}/L${l}</span>
-              <span class="badge num"><b>NUM</b><span>불일치</span></span>
-            </div>
-            <button class="btn-mini" data-jump="${key}">이동</button>
-          </div>
-          <div class="itemList">
-            <div class="itemLine">
-              <div class="muted">숫자 목록 다름</div>
-              <div class="mono">left=[${escapeHtml(info.lNums.join(", "))}] right=[${escapeHtml(info.rNums.join(", "))}]</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    numBody.innerHTML = html;
-
-    numBody.querySelectorAll("button[data-jump]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const key = btn.getAttribute("data-jump");
-        const obj = rowElByKey.get(key);
-        if (!obj) return;
-        obj.tr.scrollIntoView({behavior:"smooth", block:"center"});
-        obj.rightEl.focus();
-      });
-    });
-  }
-
-  function renderLangPanel(analysis){
-    if (!(scanLeft.checked || scanRight.checked)){
-      langBody.innerHTML = `<div class="muted">대상(왼쪽/오른쪽)이 꺼져 있어 숨은 문자 탐지를 하지 않습니다.</div>`;
-      return;
-    }
-
-    const items = [...analysis.langIssues.entries()];
-    if (items.length === 0){
-      langBody.innerHTML = `<div class="muted">허용 외 문자가 발견되지 않았습니다.</div>`;
-      return;
-    }
-
-    items.sort((a,b)=>{
-      const pa = a[0].match(/S(\d+)-L(\d+)/); const pb = b[0].match(/S(\d+)-L(\d+)/);
-      const as = pa?Number(pa[1]):0, al=pa?Number(pa[2]):0;
-      const bs = pb?Number(pb[1]):0, bl=pb?Number(pb[2]):0;
-      return (as-bs) || (al-bl);
-    });
-
-    let html = "";
-    for (const [key, det] of items){
-      const m = key.match(/S(\d+)-L(\d+)/);
-      const s = m ? Number(m[1]) : det.cell;
-      const l = m ? Number(m[2]) : det.line;
-
-      function fmtSide(sideArr, sideName){
-        if (!sideArr || sideArr.length===0) return "";
-        const lines = sideArr.map(x=>{
-          const hit = x.hit;
-          const snip = hit?.snippet ?? "";
-          const ch = hit?.ch ?? "";
-          const safe = escapeHtml(snip).replace(escapeHtml(ch), `<span style="color:#ffb86b;font-weight:900;">${escapeHtml(ch)}</span>`);
-          return `
-            <div class="itemLine">
-              <div class="muted">${sideName}: ${codesToLabel(x.code)} / ${x.cnt}개</div>
-              <div class="mono">${safe}</div>
-            </div>
-          `;
-        }).join("");
-        return lines;
-      }
-
-      html += `
-        <div class="item">
-          <div class="itemTitle">
-            <div class="left">
-              <span>S${s}/L${l}</span>
-              <span class="badge lang"><b>LANG</b><span>발견</span></span>
-            </div>
-            <button class="btn-mini" data-jump="${key}">이동</button>
-          </div>
-          <div class="itemList">
-            ${fmtSide(det.left, "왼쪽")}
-            ${fmtSide(det.right, "오른쪽")}
-          </div>
-        </div>
-      `;
-    }
-
-    langBody.innerHTML = html;
-
-    langBody.querySelectorAll("button[data-jump]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const key = btn.getAttribute("data-jump");
-        const obj = rowElByKey.get(key);
-        if (!obj) return;
-        obj.tr.scrollIntoView({behavior:"smooth", block:"center"});
-        obj.rightEl.focus();
-      });
-    });
-  }
-
-  // ===== TSV EXPORT =====
-  function buildTSV(snapshotRows, analysis){
-    const out = [];
-    if (tsvHeader.checked){
-      out.push(["셀","줄","왼쪽","오른쪽","PH","NUM","LANG","PH상세","NUM상세","LANG상세"].join("\t"));
-    }
-    for (const r of snapshotRows){
-      const ph = analysis.phIssues.get(r.key);
-      const nu = analysis.numIssues.get(r.key);
-      const la = analysis.langIssues.get(r.key);
-
-      const phFlag = ph ? "Y" : "N";
-      const nuFlag = nu ? "Y" : "N";
-      const laFlag = la ? "Y" : "N";
-
-      const phDetail = ph ? ph.map(it=>{
-        const idx = it.index + 1;
-        if (it.type === "missing_right") return `#${idx} 오른쪽없음 left=${sanitizeForTSV(it.left)}`;
-        if (it.type === "moved") return `#${idx} 위치다름 left=${sanitizeForTSV(it.left)} -> right#${it.movedTo+1}`;
-        if (it.type === "different") return `#${idx} 내용다름 left=${sanitizeForTSV(it.left)} , right=${sanitizeForTSV(it.right)}`;
-        if (it.type === "different_or_moved") return `#${idx} 내용다름/이동 left=${sanitizeForTSV(it.left)} , right=${sanitizeForTSV(it.right)} -> right#${it.movedTo+1}`;
-        if (it.type === "extra_right") return `#${idx} 오른쪽추가 right=${sanitizeForTSV(it.right)}`;
-        return "";
-      }).filter(Boolean).join(" ; ") : "";
-
-      const nuDetail = nu ? `left=[${nu.lNums.join(",")}] right=[${nu.rNums.join(",")}]` : "";
-
-      const laDetail = la ? (()=>{
-        const parts = [];
-        if (la.leftAll && la.leftAll.length){
-          parts.push("left:" + la.leftAll.map(x=>`${x.code}(${x.cnt})`).join(","));
-        }
-        if (la.rightAll && la.rightAll.length){
-          parts.push("right:" + la.rightAll.map(x=>`${x.code}(${x.cnt})`).join(","));
-        }
-        return parts.join(" | ");
-      })() : "";
-
-      out.push([
-        String(r.cell),
-        String(r.line),
-        sanitizeForTSV(r.left),
-        sanitizeForTSV(r.right),
-        phFlag,
-        nuFlag,
-        laFlag,
-        sanitizeForTSV(phDetail),
-        sanitizeForTSV(nuDetail),
-        sanitizeForTSV(laDetail)
-      ].join("\t"));
-    }
-    return out.join("\n");
-  }
-
-  // ===== MAIN =====
-  function analyzeAndRender(){
-    buildLangAllowUI();
-    const built = buildRows();
-    rows = built.rows;
-
-    const analysis = analyzeRows(rows);
-    updateStats(rows, analysis);
-    renderTable(rows, analysis);
-    renderLangPanel(analysis);
-    renderPHPanel(analysis);
-    renderNumPanel(analysis);
-  }
-
-  function syncModeUI(){
-    const mode = getMode();
-    if (mode === "tsv"){
-      blockBox.classList.add("hide");
-      tsvBox.classList.remove("hide");
-      inputMeta.textContent = "TSV: 한 줄에 '원본 TAB 번역' 형태로 붙여넣으십시오";
-    } else if (mode === "block"){
-      blockBox.classList.remove("hide");
-      tsvBox.classList.add("hide");
-      inputMeta.textContent = "단일 덩어리: 좌우 각각 1개 덩어리(셀)를 붙여넣으십시오";
-    } else {
-      blockBox.classList.remove("hide");
-      tsvBox.classList.add("hide");
-      inputMeta.textContent = "멀티셀: 셀 사이를 빈 줄 2개 이상으로 구분하십시오";
-    }
-
-    tbody.innerHTML = `<tr><td colspan="3" class="muted" style="padding:12px 10px;">분석을 누르시면 결과가 표시됩니다.</td></tr>`;
-    langBody.innerHTML = `<div class="muted">대상(왼쪽/오른쪽)을 켜고 분석하시면, 허용 외 문자가 표시됩니다.</div>`;
-    phBody.innerHTML = `<div class="muted">플레이스홀더 검사를 켜고 분석하시면 결과가 표시됩니다.</div>`;
-    numBody.innerHTML = `<div class="muted">숫자 검사를 켜고 분석하시면 결과가 표시됩니다.</div>`;
-
-    phMeta.textContent = "0";
-    numMeta.textContent = "0";
-    langMeta.textContent = "0행";
-    statTotal.textContent = "행 0";
-    statPh.textContent = "PH 0";
-    statNum.textContent = "NUM 0";
-    statLang.textContent = "LANG 0";
-    leftCount.textContent = "셀 0";
-    rightCount.textContent = "셀 0";
-    sumKOR.textContent = "0";
-    sumTHA.textContent = "0";
-    sumLAT.textContent = "0";
-
-    rowElByKey.clear();
-    rows = [];
-  }
-
-  // Events
-  analyzeBtn.addEventListener("click", analyzeAndRender);
-
-  clearBtn.addEventListener("click", ()=>{
-    leftText.value = "";
-    rightText.value = "";
-    tsvInput.value = "";
+const $ = id => document.getElementById(id);
+
+// Elements
+const analyzeBtn      = $("analyzeBtn");
+const clearBtn        = $("clearBtn");
+const copyBtn         = $("copyBtn");
+const leftText        = $("leftText");
+const rightText       = $("rightText");
+const leftCount       = $("leftCount");
+const rightCount      = $("rightCount");
+const blockBox        = $("blockBox");
+const tsvBox          = $("tsvBox");
+const tsvInput        = $("tsvInput");
+const inputMeta       = $("inputMeta");
+const checkPH         = $("checkPlaceholders");
+const checkNum        = $("checkNumbers");
+const ignoreEmpty     = $("ignoreEmptyLines");
+const tsvHeader       = $("tsvHeader");
+const statTotal       = $("statTotal");
+const statPh          = $("statPh");
+const statNum         = $("statNum");
+const statLang        = $("statLang");
+const tbody           = $("tbody");
+const phBody          = $("phBody");
+const phMeta          = $("phMeta");
+const numBody         = $("numBody");
+const numMeta         = $("numMeta");
+const langBody        = $("langBody");
+const langMeta        = $("langMeta");
+const langAllowList   = $("langAllowList");
+const scanLeft        = $("scanLeft");
+const scanRight       = $("scanRight");
+const presetAll       = $("presetAll");
+const presetLatTha    = $("presetLatTha");
+const presetLatOnly   = $("presetLatOnly");
+const sumKOR          = $("sumKOR");
+const sumTHA          = $("sumTHA");
+const sumLAT          = $("sumLAT");
+const langExcludeInput= $("langExcludeInput");
+
+// Defaults
+[checkPH, checkNum, ignoreEmpty, tsvHeader, scanLeft, scanRight].forEach(el => el.checked = false);
+
+let rows = [];
+let rowElByKey = new Map();
+
+const SCRIPTS = [
+  { code:"KOR", name:"한국어",       tip:"한글이 포함된 경우 발견됩니다." },
+  { code:"THA", name:"태국어",       tip:"태국 문자가 포함된 경우 발견됩니다." },
+  { code:"LAT", name:"라틴",         tip:"영어/독일어 등 라틴 계열 문자." },
+  { code:"JPN", name:"일본어(가나)", tip:"히라가나/가타카나가 포함된 경우." },
+  { code:"CJK", name:"한자",         tip:"한자 계열 문자가 포함된 경우." },
+  { code:"CYR", name:"키릴",         tip:"러시아어 등 키릴 문자." },
+  { code:"ARB", name:"아랍",         tip:"아랍 문자가 포함된 경우." },
+  { code:"DEV", name:"데바나가리",   tip:"힌디어 등 데바나가리 문자." },
+  { code:"ETC", name:"기타",         tip:"이모지 등 위 분류 외 문자." },
+];
+
+const langAllow = new Set(SCRIPTS.map(s => s.code)); // 기본: 전체 허용
+
+// ── MODE ──
+function getMode() {
+  const el = document.querySelector('input[name="mode"]:checked');
+  return el ? el.value : "multicell";
+}
+
+// Mode button group: sync active class
+document.querySelectorAll('.mode-group label').forEach(label => {
+  label.addEventListener('click', () => {
+    document.querySelectorAll('.mode-group label').forEach(l => l.classList.remove('active'));
+    label.classList.add('active');
+    const radio = label.querySelector('input');
+    if (radio) radio.checked = true;
     syncModeUI();
   });
+});
+// Set initial active
+const initActive = document.querySelector('.mode-group label:has(input:checked)');
+if (initActive) initActive.classList.add('active');
 
-  copyBtn.addEventListener("click", async ()=>{
-    const built = buildRows();
-    const snapshot = built.rows;
-    const analysis = analyzeRows(snapshot);
-    const tsv = buildTSV(snapshot, analysis);
+// Toggle check labels
+document.querySelectorAll('.chk-label').forEach(label => {
+  const cb = label.querySelector('input[type="checkbox"]');
+  if (!cb) return;
+  const sync = () => label.classList.toggle('on', cb.checked);
+  cb.addEventListener('change', sync);
+  sync();
+});
 
-    try{
-      await navigator.clipboard.writeText(tsv);
-      copyBtn.textContent = "복사 완료";
-      setTimeout(()=>copyBtn.textContent="TSV 복사", 1000);
-    } catch(e){
-      const ta = document.createElement("textarea");
-      ta.value = tsv;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      copyBtn.textContent = "복사 완료";
-      setTimeout(()=>copyBtn.textContent="TSV 복사", 1000);
+// Scan toggles
+[['st-l', scanLeft], ['st-r', scanRight]].forEach(([id, cb]) => {
+  const lbl = $(id);
+  const sync = () => lbl.classList.toggle('on', cb.checked);
+  cb.addEventListener('change', sync);
+  sync();
+});
+
+// ── HELPERS ──
+function escHtml(s) {
+  return (s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+function toTSV(s) { return (s ?? "").replace(/\t/g," ").replace(/\r?\n/g,"\\n").trim(); }
+
+// ── PLACEHOLDER ──
+function extractPH(text) {
+  const out = [], re = /«[^»]*»|<<[\s\S]*?>>/g;
+  let m;
+  while ((m = re.exec(text ?? "")) !== null) out.push(m[0]);
+  return out;
+}
+function normPH(ph) { return (ph ?? "").normalize("NFC").replace(/\s+/g," ").trim(); }
+function checkPHMismatch(l, r) {
+  const lPH = extractPH(l), rPH = extractPH(r);
+  const lN = lPH.map(normPH), rN = rPH.map(normPH);
+  const iss = [];
+  for (let i = 0; i < lPH.length; i++) {
+    if (i >= rPH.length) {
+      iss.push({ type:"missing_right", index:i, left:lPH[i], right:null, movedTo:rN.indexOf(lN[i]) });
+      continue;
     }
-  });
-
-  document.querySelectorAll('input[name="mode"]').forEach(r=>{
-    r.addEventListener("change", syncModeUI);
-  });
-
-  [checkPlaceholders, checkNumbers, ignoreEmptyLines, tsvHeader, scanLeft, scanRight].forEach(el=>{
-    el.addEventListener("change", ()=>{
-      const mode = getMode();
-      const hasData =
-        (mode === "tsv" && tsvInput.value.trim()) ||
-        (mode !== "tsv" && (leftText.value.trim() || rightText.value.trim()));
-      if (hasData) analyzeAndRender();
-    });
-  });
-
-  // 키워드 예외 자동 재분석
-  langExcludeInput.addEventListener("input", ()=>{
-    const mode = getMode();
-    const hasData =
-      (mode === "tsv" && tsvInput.value.trim()) ||
-      (mode !== "tsv" && (leftText.value.trim() || rightText.value.trim()));
-    if (hasData && (scanLeft.checked || scanRight.checked)) analyzeAndRender();
-  });
-
-  // 입력창 내용 넣으면 자동 분석 (debounce 0.6s)
-  let autoTimer = null;
-  function scheduleAutoAnalyze(){
-    clearTimeout(autoTimer);
-    autoTimer = setTimeout(()=>{
-      const mode = getMode();
-      const hasData =
-        (mode === "tsv" && tsvInput.value.trim()) ||
-        (mode !== "tsv" && (leftText.value.trim() || rightText.value.trim()));
-      if (hasData) analyzeAndRender();
-    }, 600);
+    if (lN[i] !== rN[i]) {
+      const moved = rN.indexOf(lN[i]);
+      iss.push({ type: moved >= 0 ? "different_or_moved" : "different", index:i, left:lPH[i], right:rPH[i], movedTo:moved });
+    }
   }
-  leftText.addEventListener("input", scheduleAutoAnalyze);
-  rightText.addEventListener("input", scheduleAutoAnalyze);
-  tsvInput.addEventListener("input", scheduleAutoAnalyze);
+  for (let j = lPH.length; j < rPH.length; j++)
+    iss.push({ type:"extra_right", index:j, left:null, right:rPH[j], movedTo:null });
+  return iss;
+}
 
-  // presets
-  presetAll.addEventListener("click", ()=>{
-    applyPreset(SCRIPT_CATALOG.map(x => x.code));
-  });
-  presetLatTha.addEventListener("click", ()=>{
-    applyPreset(["LAT","THA"]);
-  });
-  presetLatOnly.addEventListener("click", ()=>{
-    applyPreset(["LAT"]);
-  });
+// ── NUMBERS ──
+function extractNums(t) { return (t ?? "").match(/\d+/g) || []; }
+function arrEq(a, b) { return a.length === b.length && a.every((v,i) => v === b[i]); }
 
-  // init
+// ── LINE / CELL UTILS ──
+function splitLines(text) {
+  const arr = (text ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
+  return ignoreEmpty.checked ? arr.filter(x => x.trim() !== "") : arr;
+}
+function splitCells(text) {
+  const lines = (text ?? "").replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
+  const cells = [];
+  let cur = [], blanks = 0;
+  const flush = () => { const s = cur.join("\n").trimEnd(); if (s.trim()) cells.push(s); cur = []; };
+  for (const line of lines) {
+    if (line.trim() === "") { blanks++; if (blanks >= 2) flush(); else cur.push(line); }
+    else { blanks = 0; cur.push(line); }
+  }
+  flush();
+  return cells;
+}
+function parseTSV(text) {
+  const out = []; let no = 1;
+  for (const line of (text ?? "").replace(/\r\n/g,"\n").split("\n")) {
+    if (line.trim()) {
+      const [left, ...rest] = line.split("\t");
+      out.push({ key:`S1-L${no}`, cell:1, line:no, left: left ?? "", right: rest.join("\t") });
+    }
+    no++;
+  }
+  return out;
+}
+
+// ── BUILD ROWS ──
+function buildRows() {
+  const mode = getMode();
+  if (mode === "tsv") {
+    leftCount.textContent = ""; rightCount.textContent = "";
+    return { rows: parseTSV(tsvInput.value || "") };
+  }
+  if (mode === "block") {
+    const L = splitLines(leftText.value || ""), R = splitLines(rightText.value || "");
+    leftCount.textContent = ""; rightCount.textContent = "";
+    const out = [];
+    for (let i = 0; i < Math.max(L.length, R.length); i++)
+      out.push({ key:`S1-L${i+1}`, cell:1, line:i+1, left: L[i] ?? "", right: R[i] ?? "" });
+    return { rows: out };
+  }
+  // multicell
+  const Lc = splitCells(leftText.value || ""), Rc = splitCells(rightText.value || "");
+  leftCount.textContent  = `${Lc.length}셀`;
+  rightCount.textContent = `${Rc.length}셀`;
+  const out = [];
+  for (let c = 0; c < Math.max(Lc.length, Rc.length); c++) {
+    const LL = splitLines(Lc[c] ?? ""), RR = splitLines(Rc[c] ?? "");
+    for (let i = 0; i < Math.max(LL.length, RR.length); i++)
+      out.push({ key:`S${c+1}-L${i+1}`, cell:c+1, line:i+1, left: LL[i] ?? "", right: RR[i] ?? "" });
+  }
+  return { rows: out };
+}
+
+// ── LANGUAGE SCAN ──
+function isDigit(cp)  { return cp >= 0x30 && cp <= 0x39; }
+function isSpace(cp)  { return cp === 0x20 || cp === 0x09 || cp === 0x0A || cp === 0x0D; }
+function isPunct(cp)  {
+  return (cp >= 0x21 && cp <= 0x2F) || (cp >= 0x3A && cp <= 0x40) ||
+         (cp >= 0x5B && cp <= 0x60) || (cp >= 0x7B && cp <= 0x7E);
+}
+function scriptOf(cp) {
+  if ((cp>=0x1100&&cp<=0x11FF)||(cp>=0x3130&&cp<=0x318F)||(cp>=0xAC00&&cp<=0xD7AF)||(cp>=0xA960&&cp<=0xA97F)||(cp>=0xD7B0&&cp<=0xD7FF)) return "KOR";
+  if (cp>=0x0E00&&cp<=0x0E7F) return "THA";
+  if ((cp>=0x3040&&cp<=0x309F)||(cp>=0x30A0&&cp<=0x30FF)||(cp>=0x31F0&&cp<=0x31FF)) return "JPN";
+  if ((cp>=0x4E00&&cp<=0x9FFF)||(cp>=0x3400&&cp<=0x4DBF)) return "CJK";
+  if ((cp>=0x0400&&cp<=0x04FF)||(cp>=0x0500&&cp<=0x052F)||(cp>=0x2DE0&&cp<=0x2DFF)||(cp>=0xA640&&cp<=0xA69F)) return "CYR";
+  if ((cp>=0x0600&&cp<=0x06FF)||(cp>=0x0750&&cp<=0x077F)||(cp>=0x08A0&&cp<=0x08FF)) return "ARB";
+  if (cp>=0x0900&&cp<=0x097F) return "DEV";
+  if ((cp>=0x41&&cp<=0x5A)||(cp>=0x61&&cp<=0x7A)||(cp>=0x00C0&&cp<=0x024F)||(cp>=0x1E00&&cp<=0x1EFF)||(cp>=0x2C60&&cp<=0x2C7F)||(cp>=0xA720&&cp<=0xA7FF)) return "LAT";
+  if (isSpace(cp) || isDigit(cp) || isPunct(cp)) return null;
+  return "ETC";
+}
+function scanScripts(text) {
+  const counts = new Map(), firstHit = new Map();
+  const t = text ?? "";
+  for (let i = 0; i < t.length; ) {
+    const cp = t.codePointAt(i);
+    const ch = String.fromCodePoint(cp);
+    const code = scriptOf(cp);
+    if (code) {
+      counts.set(code, (counts.get(code) || 0) + 1);
+      if (!firstHit.has(code)) {
+        const s = Math.max(0, i-12), e = Math.min(t.length, i+12);
+        firstHit.set(code, { snippet: t.slice(s, e), ch });
+      }
+    }
+    i += ch.length;
+  }
+  return { counts, firstHit };
+}
+function addCounts(target, src) {
+  for (const [k, v] of src.entries()) target.set(k, (target.get(k) || 0) + v);
+}
+function getExcludeKws() {
+  return (langExcludeInput.value || "").split(",").map(k => k.trim()).filter(k => k.length > 0);
+}
+function applyKwExclude(text, kws) {
+  if (!kws.length) return text;
+  let r = text;
+  for (const kw of kws)
+    r = r.replace(new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "");
+  return r;
+}
+
+// ── ANALYZE ──
+function analyzeRows(snapshotRows) {
+  const phIssues = new Map(), numIssues = new Map(), langIssues = new Map(), totalAll = new Map();
+  const doLeft = scanLeft.checked, doRight = scanRight.checked;
+  const kws = getExcludeKws();
+
+  for (const r of snapshotRows) {
+    if (checkPH.checked) {
+      const iss = checkPHMismatch(r.left, r.right);
+      if (iss.length) phIssues.set(r.key, iss);
+    }
+    if (checkNum.checked) {
+      const lN = extractNums(r.left), rN = extractNums(r.right);
+      if (!arrEq(lN, rN)) numIssues.set(r.key, { lNums: lN, rNums: rN });
+    }
+    if (doLeft || doRight) {
+      const lScan = doLeft  ? scanScripts(applyKwExclude(r.left,  kws)) : { counts:new Map(), firstHit:new Map() };
+      const rScan = doRight ? scanScripts(applyKwExclude(r.right, kws)) : { counts:new Map(), firstHit:new Map() };
+      addCounts(totalAll, lScan.counts);
+      addCounts(totalAll, rScan.counts);
+      const disL = [...lScan.counts.entries()].filter(([c]) => !langAllow.has(c)).map(([c,n]) => ({ code:c, cnt:n, hit:lScan.firstHit.get(c) }));
+      const disR = [...rScan.counts.entries()].filter(([c]) => !langAllow.has(c)).map(([c,n]) => ({ code:c, cnt:n, hit:rScan.firstHit.get(c) }));
+      disL.sort((a,b) => b.cnt-a.cnt); disR.sort((a,b) => b.cnt-a.cnt);
+      if (disL.length || disR.length)
+        langIssues.set(r.key, { cell:r.cell, line:r.line, left:disL, right:disR });
+    }
+  }
+  return { phIssues, numIssues, langIssues, totalAll };
+}
+
+// ── ALLOW UI ──
+function buildLangAllowUI() {
+  if (langAllowList.childElementCount > 0) return;
+  for (const s of SCRIPTS) {
+    const label = document.createElement("label");
+    label.className = "allow-item on";
+    label.setAttribute("data-tip", s.tip);
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = true;
+    cb.setAttribute("data-code", s.code);
+
+    const code = document.createElement("span");
+    code.className = "code"; code.textContent = s.code;
+
+    const cnt = document.createElement("span");
+    cnt.className = "c-cnt"; cnt.id = `cnt_${s.code}`; cnt.textContent = "0";
+
+    label.append(cb, code, cnt);
+    cb.addEventListener("change", () => {
+      if (cb.checked) { langAllow.add(s.code); label.classList.add("on"); }
+      else            { langAllow.delete(s.code); label.classList.remove("on"); }
+      if (hasData()) analyzeAndRender();
+    });
+    langAllowList.appendChild(label);
+  }
+}
+
+function applyPreset(codes) {
+  langAllow.clear();
+  codes.forEach(c => langAllow.add(c));
+  langAllowList.querySelectorAll('input[data-code]').forEach(cb => {
+    cb.checked = langAllow.has(cb.getAttribute("data-code"));
+    cb.closest('.allow-item').classList.toggle('on', cb.checked);
+  });
+  if (hasData()) analyzeAndRender();
+}
+
+// ── STATS ──
+function updateStats(snapshotRows, analysis) {
+  statTotal.textContent = `행 ${snapshotRows.length}`;
+  statPh.textContent    = `PH ${analysis.phIssues.size}`;
+  statNum.textContent   = `NUM ${analysis.numIssues.size}`;
+  statLang.textContent  = `LANG ${analysis.langIssues.size}`;
+  phMeta.textContent    = `${analysis.phIssues.size}`;
+  numMeta.textContent   = `${analysis.numIssues.size}`;
+  langMeta.textContent  = `${analysis.langIssues.size}행`;
+  sumKOR.textContent    = analysis.totalAll.get("KOR") || 0;
+  sumTHA.textContent    = analysis.totalAll.get("THA") || 0;
+  sumLAT.textContent    = analysis.totalAll.get("LAT") || 0;
+  for (const s of SCRIPTS) {
+    const el = $(`cnt_${s.code}`);
+    if (el) el.textContent = analysis.totalAll.get(s.code) || 0;
+  }
+}
+
+// ── RENDER TABLE ──
+function renderTable(snapshotRows, analysis) {
+  tbody.innerHTML = "";
+  rowElByKey.clear();
+  if (!snapshotRows.length) {
+    tbody.innerHTML = `<tr><td colspan="3" class="empty" style="padding:14px 12px">결과 없음</td></tr>`;
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for (const r of snapshotRows) {
+    const hasPH   = analysis.phIssues.has(r.key);
+    const hasNum  = analysis.numIssues.has(r.key);
+    const hasLang = analysis.langIssues.has(r.key);
+
+    const tr = document.createElement("tr");
+
+    // No
+    const tdNo = document.createElement("td");
+    tdNo.className = "col-no";
+    const br = document.createElement("div");
+    br.className = "badge-row";
+    const loc = document.createElement("span");
+    loc.className = "loc"; loc.textContent = `S${r.cell}/L${r.line}`;
+    br.appendChild(loc);
+    if (hasPH)   { const b = document.createElement("span"); b.className = "badge ph";   b.textContent = "PH";   br.appendChild(b); }
+    if (hasNum)  { const b = document.createElement("span"); b.className = "badge num";  b.textContent = "NUM";  br.appendChild(b); }
+    if (hasLang) { const b = document.createElement("span"); b.className = "badge lang"; b.textContent = "LANG"; br.appendChild(b); }
+    tdNo.appendChild(br);
+    tr.appendChild(tdNo);
+
+    const mkCell = (txt, ph, num, lang) => {
+      const td = document.createElement("td");
+      const div = document.createElement("div");
+      div.className = "cell" + (ph?" hl-ph":"") + (num?" hl-num":"") + (lang?" hl-lang":"");
+      div.contentEditable = "true"; div.spellcheck = false;
+      div.textContent = txt ?? "";
+      div.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); div.blur(); } });
+      td.appendChild(div);
+      return { td, div };
+    };
+
+    const { td: tdL, div: leftEl  } = mkCell(r.left,  hasPH, hasNum, hasLang);
+    const { td: tdR, div: rightEl } = mkCell(r.right, hasPH, hasNum, hasLang);
+    tdL.className = "col-l"; tdR.className = "col-r";
+    tr.append(tdL, tdR);
+    frag.appendChild(tr);
+    rowElByKey.set(r.key, { tr, leftEl, rightEl });
+  }
+  tbody.appendChild(frag);
+}
+
+// ── PANEL HELPERS ──
+function sortEntries(entries) {
+  return [...entries].sort((a, b) => {
+    const pa = a[0].match(/S(\d+)-L(\d+)/), pb = b[0].match(/S(\d+)-L(\d+)/);
+    return ((pa ? +pa[1] : 0) - (pb ? +pb[1] : 0)) || ((pa ? +pa[2] : 0) - (pb ? +pb[2] : 0));
+  });
+}
+function jumpBtn(key) {
+  const btn = document.createElement("button");
+  btn.className = "jump-btn"; btn.textContent = "이동";
+  btn.addEventListener("click", () => {
+    const obj = rowElByKey.get(key);
+    if (!obj) return;
+    obj.tr.scrollIntoView({ behavior: "smooth", block: "center" });
+    obj.rightEl.focus();
+  });
+  return btn;
+}
+function makeItem(key, badgeClass, badgeText) {
+  const [, s, l] = key.match(/S(\d+)-L(\d+)/) || [, 1, 1];
+  const item = document.createElement("div"); item.className = "p-item";
+  const head = document.createElement("div"); head.className = "p-head";
+  head.innerHTML = `<span class="loc">S${s}/L${l} <span class="badge ${badgeClass}">${badgeText}</span></span>`;
+  head.appendChild(jumpBtn(key));
+  item.appendChild(head);
+  return item;
+}
+
+// ── RENDER PANELS ──
+function renderPHPanel(analysis) {
+  if (!checkPH.checked) { phBody.innerHTML = `<span class="empty">PH 검사가 꺼져 있습니다.</span>`; return; }
+  const items = sortEntries(analysis.phIssues);
+  if (!items.length) { phBody.innerHTML = `<span class="empty">플레이스홀더 오류 없음 ✓</span>`; return; }
+  phBody.innerHTML = "";
+  for (const [key, issues] of items) {
+    const item = makeItem(key, "ph", "PH");
+    const detail = document.createElement("div"); detail.className = "p-detail";
+    detail.innerHTML = issues.map(it => {
+      const i = it.index + 1;
+      if (it.type === "missing_right")     return `<div class="p-line"><span class="muted">#${i} 오른쪽 없음</span><br><span class="mono">${escHtml(it.left)}</span></div>`;
+      if (it.type === "moved")             return `<div class="p-line"><span class="muted">#${i} 위치 다름 → right#${it.movedTo+1}</span><br><span class="mono">${escHtml(it.left)}</span></div>`;
+      if (it.type === "different")         return `<div class="p-line"><span class="muted">#${i} 내용 다름</span><br><span class="mono">${escHtml(it.left)} → ${escHtml(it.right)}</span></div>`;
+      if (it.type === "different_or_moved")return `<div class="p-line"><span class="muted">#${i} 내용/위치 다름</span><br><span class="mono">${escHtml(it.left)}</span></div>`;
+      if (it.type === "extra_right")       return `<div class="p-line"><span class="muted">#${i} 오른쪽 추가</span><br><span class="mono">${escHtml(it.right)}</span></div>`;
+      return "";
+    }).join("");
+    item.appendChild(detail);
+    phBody.appendChild(item);
+  }
+}
+
+function renderNumPanel(analysis) {
+  if (!checkNum.checked) { numBody.innerHTML = `<span class="empty">숫자 검사가 꺼져 있습니다.</span>`; return; }
+  const items = sortEntries(analysis.numIssues);
+  if (!items.length) { numBody.innerHTML = `<span class="empty">숫자 오류 없음 ✓</span>`; return; }
+  numBody.innerHTML = "";
+  for (const [key, info] of items) {
+    const item = makeItem(key, "num", "NUM");
+    const detail = document.createElement("div"); detail.className = "p-detail";
+    detail.innerHTML = `<div class="p-line"><span class="muted">원본:</span> <span class="mono">[${escHtml(info.lNums.join(", "))}]</span></div>`
+                     + `<div class="p-line"><span class="muted">번역:</span> <span class="mono">[${escHtml(info.rNums.join(", "))}]</span></div>`;
+    item.appendChild(detail);
+    numBody.appendChild(item);
+  }
+}
+
+function renderLangPanel(analysis) {
+  if (!(scanLeft.checked || scanRight.checked)) {
+    langBody.innerHTML = `<span class="empty">대상(왼쪽/오른쪽)을 체크하면 탐지를 시작합니다.</span>`; return;
+  }
+  const items = sortEntries(analysis.langIssues);
+  if (!items.length) { langBody.innerHTML = `<span class="empty">허용 외 문자 없음 ✓</span>`; return; }
+  langBody.innerHTML = "";
+  for (const [key, det] of items) {
+    const item = makeItem(key, "lang", "LANG");
+    const detail = document.createElement("div"); detail.className = "p-detail";
+    const fmtSide = (arr, side) => arr.map(x => {
+      const snip = x.hit?.snippet ?? "";
+      const ch   = x.hit?.ch ?? "";
+      const safe = escHtml(snip).replace(escHtml(ch), `<span style="color:var(--lang);font-weight:900;">${escHtml(ch)}</span>`);
+      return `<div class="p-line"><span class="muted">${side} [${x.code}] ${x.cnt}개</span><br><span class="mono">${safe}</span></div>`;
+    }).join("");
+    detail.innerHTML = fmtSide(det.left, "원본") + fmtSide(det.right, "번역");
+    item.appendChild(detail);
+    langBody.appendChild(item);
+  }
+}
+
+// ── TSV EXPORT ──
+function buildTSV(snapshotRows, analysis) {
+  const out = [];
+  if (tsvHeader.checked) out.push(["셀","줄","원본","번역","PH","NUM","LANG"].join("\t"));
+  for (const r of snapshotRows) {
+    out.push([
+      r.cell, r.line,
+      toTSV(r.left), toTSV(r.right),
+      analysis.phIssues.has(r.key)   ? "Y" : "N",
+      analysis.numIssues.has(r.key)  ? "Y" : "N",
+      analysis.langIssues.has(r.key) ? "Y" : "N",
+    ].join("\t"));
+  }
+  return out.join("\n");
+}
+
+// ── MAIN ──
+function hasData() {
+  const mode = getMode();
+  return mode === "tsv"
+    ? !!tsvInput.value.trim()
+    : !!(leftText.value.trim() || rightText.value.trim());
+}
+
+function analyzeAndRender() {
   buildLangAllowUI();
+  const { rows: r } = buildRows();
+  rows = r;
+  const analysis = analyzeRows(rows);
+  updateStats(rows, analysis);
+  renderTable(rows, analysis);
+  renderLangPanel(analysis);
+  renderPHPanel(analysis);
+  renderNumPanel(analysis);
+}
+
+function syncModeUI() {
+  const mode = getMode();
+  if (mode === "tsv") {
+    blockBox.classList.add("hide");
+    tsvBox.style.display = "block";
+    inputMeta.textContent = "TSV · 원본 TAB 번역";
+  } else {
+    blockBox.classList.remove("hide");
+    tsvBox.style.display = "none";
+    inputMeta.textContent = mode === "multicell"
+      ? "멀티셀 · 셀 사이 빈 줄 2개 이상"
+      : "단일 · 줄 단위 비교";
+  }
+  leftCount.textContent = ""; rightCount.textContent = "";
+  tbody.innerHTML = `<tr><td colspan="3" class="empty" style="padding:14px 12px">내용을 입력하면 자동으로 분석됩니다.</td></tr>`;
+  langBody.innerHTML = `<span class="empty">대상(왼쪽/오른쪽)을 체크하면 탐지를 시작합니다.</span>`;
+  phBody.innerHTML   = `<span class="empty">PH 검사를 켜고 분석하면 결과가 표시됩니다.</span>`;
+  numBody.innerHTML  = `<span class="empty">숫자 검사를 켜고 분석하면 결과가 표시됩니다.</span>`;
+  statTotal.textContent = "행 0"; statPh.textContent = "PH 0";
+  statNum.textContent = "NUM 0"; statLang.textContent = "LANG 0";
+  phMeta.textContent = "0"; numMeta.textContent = "0"; langMeta.textContent = "0행";
+  sumKOR.textContent = "0"; sumTHA.textContent = "0"; sumLAT.textContent = "0";
+  rowElByKey.clear(); rows = [];
+}
+
+// ── EVENTS ──
+analyzeBtn.addEventListener("click", analyzeAndRender);
+
+clearBtn.addEventListener("click", () => {
+  leftText.value = ""; rightText.value = ""; tsvInput.value = "";
   syncModeUI();
-</script>
-<script>
-(() => {
-  const current = (location.pathname.split("/").pop() || "").toLowerCase();
-  document.querySelectorAll(".gnb a[data-page]").forEach(a => {
-    if ((a.dataset.page || "").toLowerCase() === current) a.classList.add("active");
-  });
-})();
+});
+
+copyBtn.addEventListener("click", async () => {
+  const { rows: r } = buildRows();
+  const analysis = analyzeRows(r);
+  const tsv = buildTSV(r, analysis);
+  try {
+    await navigator.clipboard.writeText(tsv);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = tsv; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); document.body.removeChild(ta);
+  }
+  copyBtn.textContent = "복사 완료!";
+  setTimeout(() => copyBtn.textContent = "TSV 복사", 1200);
+});
+
+// Check toggles → re-analyze
+[checkPH, checkNum, ignoreEmpty, tsvHeader, scanLeft, scanRight].forEach(el => {
+  el.addEventListener("change", () => { if (hasData()) analyzeAndRender(); });
+});
+
+// Keyword exclusion → re-analyze
+langExcludeInput.addEventListener("input", () => {
+  if (hasData() && (scanLeft.checked || scanRight.checked)) analyzeAndRender();
+});
+
+// Auto-analyze: input + paste
+let autoTimer = null;
+function scheduleAnalyze() {
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => { if (hasData()) analyzeAndRender(); }, 400);
+}
+[leftText, rightText, tsvInput].forEach(el => {
+  el.addEventListener("input", scheduleAnalyze);
+  el.addEventListener("paste", () => setTimeout(scheduleAnalyze, 10));
+});
+
+// Presets
+presetAll.addEventListener("click",     () => applyPreset(SCRIPTS.map(s => s.code)));
+presetLatTha.addEventListener("click",  () => applyPreset(["LAT","THA"]));
+presetLatOnly.addEventListener("click", () => applyPreset(["LAT"]));
+
+// Nav active
+const curPage = (location.pathname.split("/").pop() || "").toLowerCase();
+document.querySelectorAll('.nav a[data-page]').forEach(a => {
+  if ((a.dataset.page || "").toLowerCase() === curPage) a.classList.add("active");
+});
+
+// Init
+buildLangAllowUI();
+syncModeUI();
 </script>
 </body>
 </html>
