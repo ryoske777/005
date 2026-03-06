@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>문자열 탐지</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.03);
+      --surface2: rgba(255,255,255,0.06);
+      --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --accent: #58a6ff;
+      --lang: #ffa657;
+      --ok: #3fb950;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      font-size: 13px; line-height: 1.5;
+    }
+
+    /* ── NAV ── */
+    .nav {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; gap: 6px;
+      height: 44px; padding: 0 16px;
+      background: rgba(13,17,23,0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand { font-weight: 900; font-size: 13px; color: var(--text); margin-right: 6px; }
+    .nav a {
+      text-decoration: none; font-size: 12px; font-weight: 700;
+      color: var(--muted); padding: 5px 10px;
+      border-radius: 8px; border: 1px solid transparent; transition: .1s;
+    }
+    .nav a:hover { color: var(--text); background: var(--surface2); }
+    .nav a.active {
+      color: var(--accent); border-color: rgba(88,166,255,0.35); background: rgba(88,166,255,0.1);
+    }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; flex-wrap: wrap;
+      background: rgba(255,255,255,0.015);
+      border-bottom: 1px solid var(--border);
+    }
+    .sep { width: 1px; height: 20px; background: var(--border2); margin: 0 2px; }
+
+    .btn {
+      display: inline-flex; align-items: center;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text); font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: .1s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.1); }
+    .btn.primary { background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.4); color: #79c0ff; }
+    .btn.primary:hover { background: rgba(88,166,255,0.25); }
+    .btn.ghost { background: transparent; }
+    .btn.ghost:hover { background: var(--surface2); }
+    .btn.success { background: rgba(63,185,80,0.15); border-color: rgba(63,185,80,0.4); color: #56d364; }
+    .btn.success:hover { background: rgba(63,185,80,0.25); }
+    .btn:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+    /* Input mode toggle */
+    .mode-grp {
+      display: flex; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden;
+    }
+    .mode-grp button {
+      padding: 5px 13px; font-size: 12px; font-weight: 700;
+      color: var(--muted); background: transparent;
+      border: 0; border-right: 1px solid var(--border); cursor: pointer; transition: .1s;
+    }
+    .mode-grp button:last-child { border-right: 0; }
+    .mode-grp button.active { background: rgba(88,166,255,0.12); color: #79c0ff; }
+    .mode-grp button:not(.active):hover { background: var(--surface2); color: var(--text); }
+
+    /* ── MAIN ── */
+    .main {
+      display: grid; grid-template-columns: 400px 1fr;
+      gap: 12px; padding: 12px 16px 32px;
+      max-width: 1900px; margin: 0 auto; align-items: start;
+    }
+    @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .card-head {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px; gap: 8px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.015);
+    }
+    .card-title { font-size: 12px; font-weight: 800; }
+    .card-meta  { font-size: 11px; color: var(--muted); }
+    .head-row { display: flex; align-items: center; gap: 6px; }
+
+    /* ── LEFT: INPUT ── */
+    textarea {
+      width: 100%; border: 0; outline: none; resize: vertical;
+      padding: 10px 12px;
+      background: rgba(0,0,0,0.12); color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; line-height: 1.65;
+    }
+    #mainInput { height: 500px; }
+
+    /* Upload zone */
+    .upload-zone {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 10px;
+      padding: 36px 20px; cursor: pointer;
+      border: 2px dashed var(--border2);
+      border-radius: 10px; margin: 12px;
+      color: var(--muted); font-size: 13px; text-align: center;
+      transition: .15s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: rgba(88,166,255,0.5);
+      background: rgba(88,166,255,0.05);
+      color: var(--text);
+    }
+    .upload-icon { font-size: 32px; opacity: 0.5; }
+    #excelFileInput { display: none; }
+
+    .excel-info { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .file-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 8px;
+      border: 1px solid rgba(63,185,80,0.3);
+      background: rgba(63,185,80,0.08); font-size: 12px; color: #56d364;
+    }
+    .col-selector {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .col-selector label { font-size: 11px; font-weight: 700; color: var(--muted); }
+    .col-selector select {
+      padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,0.3); color: var(--text);
+      font-size: 12px; outline: none; cursor: pointer;
+    }
+    .col-selector select:focus { border-color: rgba(88,166,255,0.45); }
+    .excel-stat { font-size: 11px; color: var(--muted); }
+
+    /* ── RIGHT: SETTINGS ── */
+    .right-col { display: flex; flex-direction: column; gap: 10px; }
+
+    /* Script groups */
+    .script-groups { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+    .sg-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 800; color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .sg-header::after {
+      content: ""; flex: 1; height: 1px; background: var(--border);
+    }
+    .sg-scripts { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    /* Script toggle chips */
+    .sc-label {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.12);
+      font-size: 11px; color: var(--muted);
+      cursor: pointer; user-select: none; transition: .1s;
+    }
+    .sc-label input { display: none; }
+    .sc-label .sc-code {
+      font-family: monospace; font-weight: 900;
+      color: rgba(255,166,87,0.65); font-size: 10px;
+    }
+    .sc-label.on {
+      border-color: rgba(255,166,87,0.5);
+      background: rgba(255,166,87,0.12);
+      color: var(--text);
+    }
+    .sc-label.on .sc-code { color: #ffa657; }
+    .sc-label:not(.on):hover { background: var(--surface2); color: var(--text); }
+
+    /* Exception textarea */
+    .exception-area { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 5px; }
+    .exception-label {
+      font-size: 11px; font-weight: 800; color: var(--muted);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .exception-hint { font-weight: 400; }
+    #excludeInput {
+      width: 100%; height: 72px; resize: vertical;
+      padding: 8px 10px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,0.2); color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; line-height: 1.6; outline: none;
+    }
+    #excludeInput:focus { border-color: rgba(88,166,255,0.45); }
+    #excludeInput::placeholder { color: rgba(125,133,144,0.5); }
+
+    /* ── RESULTS CARD ── */
+    .chunk-bar {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .chunk-lbl { font-size: 11px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+    .chunk-input {
+      width: 72px; padding: 4px 8px; border-radius: 7px;
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,0.25); color: var(--text);
+      font-size: 12px; font-weight: 700; text-align: center; outline: none;
+    }
+    .chunk-input:focus { border-color: rgba(88,166,255,0.45); }
+    .chunk-input.err { border-color: rgba(255,166,87,0.7); }
+    .chunk-input::-webkit-inner-spin-button,
+    .chunk-input::-webkit-outer-spin-button { opacity: 0.4; }
+    @keyframes pulse-warn {
+      0%,100% { border-color: rgba(255,166,87,0.3); box-shadow: none; }
+      50% { border-color: rgba(255,166,87,0.9); box-shadow: 0 0 0 3px rgba(255,166,87,0.2); }
+    }
+    .chunk-input.pulse { animation: pulse-warn 0.5s ease 3; }
+
+    .chunk-nav-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 7px;
+      border: 1px solid var(--border2); background: transparent;
+      color: var(--text); font-size: 13px; cursor: pointer; transition: .1s;
+    }
+    .chunk-nav-btn:hover:not(:disabled) { background: var(--surface2); }
+    .chunk-nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+    .chunk-page-info {
+      padding: 3px 10px; border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; min-width: 80px; text-align: center;
+    }
+    .chunk-page-info.active { color: var(--accent); border-color: rgba(88,166,255,0.3); }
+
+    /* Table */
+    .table-wrap { overflow: auto; max-height: 560px; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+    thead th {
+      position: sticky; top: 0; z-index: 1;
+      background: rgba(13,17,23,0.98);
+      border-bottom: 1px solid var(--border2);
+      padding: 7px 10px; text-align: left;
+      font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap;
+    }
+    tbody td {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      padding: 6px 10px; vertical-align: top;
+    }
+    tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .col-no   { width: 60px; }
+    .col-text { width: 65%; }
+    .col-det  { width: 35%; }
+    .row-no { font-family: monospace; font-size: 11px; color: var(--muted); }
+    .row-text {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    }
+    .det-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .det-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 999px;
+      border: 1px solid rgba(255,166,87,0.4);
+      background: rgba(255,166,87,0.1);
+      font-size: 10px; font-weight: 800; color: #ffa657;
+    }
+    .det-chip .cnt { color: rgba(255,166,87,0.65); font-weight: 400; }
+    .empty { color: var(--muted); font-size: 12px; }
+
+    /* Mini buttons */
+    .mini-btn {
+      padding: 3px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; transition: .1s;
+    }
+    .mini-btn:hover { background: var(--surface2); color: var(--text); }
+
+    /* ── TOAST ── */
+    .toast-wrap {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      z-index: 9999; pointer-events: none;
+    }
+    .toast {
+      padding: 10px 18px; border-radius: 10px; border: 1px solid;
+      font-size: 12px; font-weight: 700;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast-warn  { background: rgba(255,166,87,0.15);  border-color: rgba(255,166,87,0.4);  color: #ffa657; }
+    .toast-error { background: rgba(255,80,80,0.15);   border-color: rgba(255,80,80,0.4);   color: #ff6b6b; }
+    .toast-ok    { background: rgba(63,185,80,0.15);   border-color: rgba(63,185,80,0.4);   color: #56d364; }
+
+    .hide { display: none !important; }
+
+    /* Tooltip */
+    [data-tip] { position: relative; }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 7px); left: 50%;
+      transform: translateX(-50%);
+      max-width: 220px; white-space: normal;
+      padding: 6px 9px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(10,14,22,0.97);
+      color: rgba(230,237,243,0.92); font-size: 11px; line-height: 1.45;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0; pointer-events: none; transition: opacity .1s; z-index: 999;
+    }
+    [data-tip]:hover::after { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <span class="nav-brand">TOOLS</span>
+  <a href="review.html" data-page="review.html">번역 검수</a>
+  <a href="strscan.html" data-page="strscan.html">문자열 탐지</a>
+  <a href="placeholder.html" data-page="placeholder.html">플레이스홀더</a>
+</nav>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn primary" id="analyzeBtn">분석</button>
+  <button class="btn ghost"   id="clearBtn">초기화</button>
+
+  <div class="sep"></div>
+
+  <div class="mode-grp">
+    <button id="modeText"  class="active" data-tip="텍스트를 직접 붙여넣어 분석합니다">텍스트</button>
+    <button id="modeExcel" data-tip="엑셀 파일을 업로드하고 특정 열을 분석합니다">엑셀</button>
+  </div>
+
+  <div class="sep"></div>
+
+  <button class="btn success hide" id="exportBtn" data-tip="원본 엑셀에 탐지 결과 열을 추가하여 다운로드">엑셀 내보내기</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: INPUT -->
+  <div class="left-col">
+
+    <!-- TEXT mode -->
+    <div class="card" id="textCard">
+      <div class="card-head">
+        <span class="card-title">텍스트 입력</span>
+        <span class="card-meta" id="textLineMeta"></span>
+      </div>
+      <textarea id="mainInput" spellcheck="false" placeholder="분석할 텍스트를 붙여넣으십시오.&#10;&#10;• 한 줄 = 한 행으로 처리됩니다.&#10;• 오른쪽에서 청크 크기를 설정하면 분석을 시작할 수 있습니다."></textarea>
+    </div>
+
+    <!-- EXCEL mode -->
+    <div class="card hide" id="excelCard">
+      <div class="card-head">
+        <span class="card-title">엑셀 파일</span>
+        <button class="mini-btn" id="excelResetBtn">파일 변경</button>
+      </div>
+
+      <div id="uploadZoneWrap">
+        <div class="upload-zone" id="dropZone">
+          <div class="upload-icon">📂</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px">파일을 끌어다 놓거나 클릭하여 선택</div>
+            <div style="font-size:11px">지원 형식: .xlsx .xls .csv</div>
+          </div>
+          <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
+        </div>
+      </div>
+
+      <div class="excel-info hide" id="excelInfo">
+        <div id="fileBadge" class="file-badge">
+          <span>📄</span><span id="fileName">-</span>
+          <span id="excelStatEl" style="font-size:11px;color:rgba(86,211,100,0.7)"></span>
+        </div>
+        <div class="col-selector">
+          <label>분석할 열 선택</label>
+          <select id="colSelect">
+            <option value="">-- 열을 선택하세요 --</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /left-col -->
+
+  <!-- RIGHT: SETTINGS + RESULTS -->
+  <div class="right-col">
+
+    <!-- Settings card -->
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">탐지 언어 설정</span>
+        <div class="head-row">
+          <button class="mini-btn" id="selectAllScripts">전체선택</button>
+          <button class="mini-btn" id="clearAllScripts">전체해제</button>
+        </div>
+      </div>
+      <div class="script-groups" id="scriptGroups">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="exception-area">
+        <div class="exception-label">
+          <span>예외 처리 <span class="exception-hint">— 탐지 전 제거할 문자열 (콤마 구분)</span></span>
+        </div>
+        <textarea id="excludeInput" spellcheck="false"
+          placeholder="예) Lv, CL, HP, EP, MP&#10;     여러 항목은 콤마(,)로 구분하세요&#10;     입력 즉시 현재 청크에 반영됩니다"></textarea>
+      </div>
+    </div>
+
+    <!-- Results card -->
+    <div class="card">
+      <div class="card-head">
+        <div class="chunk-bar">
+          <span class="chunk-lbl">청크</span>
+          <input class="chunk-input" id="chunkSizeInput" type="number" min="1" step="500"
+            placeholder="행 수" data-tip="한 번에 분석할 행 수 (필수 입력)">
+          <span class="chunk-lbl" style="color:var(--muted)">행</span>
+          <button class="chunk-nav-btn" id="prevBtn" disabled>◀</button>
+          <span class="chunk-page-info" id="chunkInfo">-</span>
+          <button class="chunk-nav-btn" id="nextBtn" disabled>▶</button>
+        </div>
+        <span class="card-meta" id="resultMeta">-</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-no">행</th>
+              <th class="col-text">내용</th>
+              <th class="col-det">탐지 결과</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="3" class="empty" style="padding:16px 12px">
+              ① 오른쪽 상단 청크 행 수 입력 → ② 탐지 언어 선택 → ③ 분석 버튼 클릭
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /right-col -->
+
+</div><!-- /main -->
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+// ── SCRIPT CATALOG ──
+const SCRIPT_GROUPS = [
+  {
+    name: "동아시아",
+    scripts: [
+      { code:"KOR", label:"한국어",  note:"Korean · 한글" },
+      { code:"HRG", label:"히라가나", note:"Hiragana · ひらがな" },
+      { code:"KAT", label:"가타카나", note:"Katakana · カタカナ" },
+      { code:"CJK", label:"한자",    note:"CJK Unified Ideographs · 漢字" },
+    ]
+  },
+  {
+    name: "동남아시아",
+    scripts: [
+      { code:"THA", label:"태국어",   note:"Thai · ภาษาไทย" },
+      { code:"MYA", label:"미얀마",   note:"Myanmar · မြန်မာ" },
+      { code:"KHM", label:"크메르",   note:"Khmer · ខ្មែរ (캄보디아)" },
+      { code:"LAO", label:"라오스",   note:"Lao · ລາວ" },
+    ]
+  },
+  {
+    name: "유럽",
+    scripts: [
+      { code:"LAT", label:"라틴",      note:"Latin (영어·독일어·프랑스어 등)" },
+      { code:"CYR", label:"키릴",      note:"Cyrillic (러시아어·우크라이나어 등)" },
+      { code:"GRK", label:"그리스어",  note:"Greek · Ελληνικά" },
+      { code:"ARM", label:"아르메니아", note:"Armenian · Հայ" },
+      { code:"GEO", label:"조지아",    note:"Georgian · ქართული" },
+    ]
+  },
+  {
+    name: "중동 · 아프리카",
+    scripts: [
+      { code:"ARB", label:"아랍어",     note:"Arabic · العربية" },
+      { code:"HEB", label:"히브리어",   note:"Hebrew · עברית" },
+      { code:"ETH", label:"에티오피아", note:"Ethiopic · አማርኛ (암하라어)" },
+    ]
+  },
+  {
+    name: "남아시아",
+    scripts: [
+      { code:"DEV", label:"데바나가리", note:"Devanagari (힌디·마라티·네팔어 등)" },
+      { code:"BEN", label:"벵골어",     note:"Bengali · বাংলা" },
+      { code:"GUR", label:"구르무키",   note:"Gurmukhi (펀자브어) · ਪੰਜਾਬੀ" },
+      { code:"GUJ", label:"구자라트",   note:"Gujarati · ગુજરાતી" },
+      { code:"ORI", label:"오리야",     note:"Odia · ଓଡ଼ିଆ" },
+      { code:"TAM", label:"타밀어",     note:"Tamil · தமிழ்" },
+      { code:"TEL", label:"텔루구",     note:"Telugu · తెలుగు" },
+      { code:"KAN", label:"칸나다",     note:"Kannada · ಕನ್ನಡ" },
+      { code:"MAL", label:"말라얄람",   note:"Malayalam · മലയാളം" },
+      { code:"SIN", label:"싱할라",     note:"Sinhala · සිංහල" },
+    ]
+  },
+  {
+    name: "기타",
+    scripts: [
+      { code:"TIB", label:"티베트",   note:"Tibetan · བོད་ཡིག" },
+      { code:"EMJ", label:"이모지",   note:"Emoji 😊🎉" },
+      { code:"ETC", label:"기타",     note:"위 분류 외 모든 유니코드 문자" },
+    ]
+  },
+];
+
+// Flat list for quick lookup
+const SCRIPTS_FLAT = SCRIPT_GROUPS.flatMap(g => g.scripts);
+
+// ── STATE ──
+let allRows    = [];   // { key, line, text, excelRowIdx? }
+let chunkPage  = 0;
+let rows       = [];   // current chunk slice
+let inputMode  = "text"; // "text" | "excel"
+let excelWb    = null;
+let excelWs    = null;
+let excelRange = null;
+let excelColIdx = -1;
+let excelTotalRows = 0;
+
+// ── SCRIPT DETECTION ──
+function isDigit(cp)  { return cp >= 0x30 && cp <= 0x39; }
+function isSpace(cp)  { return cp === 0x20 || cp === 0x09 || cp === 0x0A || cp === 0x0D; }
+function isPunct(cp)  {
+  return (cp>=0x21&&cp<=0x2F)||(cp>=0x3A&&cp<=0x40)||(cp>=0x5B&&cp<=0x60)||(cp>=0x7B&&cp<=0x7E);
+}
+
+function scriptOf(cp) {
+  // 한국어 (Korean / Hangul)
+  if ((cp>=0x1100&&cp<=0x11FF)||(cp>=0x3130&&cp<=0x318F)||(cp>=0xAC00&&cp<=0xD7AF)||(cp>=0xA960&&cp<=0xA97F)||(cp>=0xD7B0&&cp<=0xD7FF)) return "KOR";
+  // 태국어 (Thai)
+  if (cp>=0x0E00&&cp<=0x0E7F) return "THA";
+  // 히라가나 (Hiragana)
+  if (cp>=0x3040&&cp<=0x309F) return "HRG";
+  // 가타카나 (Katakana)
+  if ((cp>=0x30A0&&cp<=0x30FF)||(cp>=0x31F0&&cp<=0x31FF)||(cp>=0xFF65&&cp<=0xFF9F)) return "KAT";
+  // 한자 (CJK Unified Ideographs)
+  if ((cp>=0x4E00&&cp<=0x9FFF)||(cp>=0x3400&&cp<=0x4DBF)||(cp>=0xF900&&cp<=0xFAFF)||
+      (cp>=0x20000&&cp<=0x2A6DF)||(cp>=0x2A700&&cp<=0x2CEAF)) return "CJK";
+  // 키릴 (Cyrillic)
+  if ((cp>=0x0400&&cp<=0x04FF)||(cp>=0x0500&&cp<=0x052F)||(cp>=0x2DE0&&cp<=0x2DFF)||(cp>=0xA640&&cp<=0xA69F)) return "CYR";
+  // 아랍어 (Arabic)
+  if ((cp>=0x0600&&cp<=0x06FF)||(cp>=0x0750&&cp<=0x077F)||(cp>=0x08A0&&cp<=0x08FF)||(cp>=0xFB50&&cp<=0xFDFF)||(cp>=0xFE70&&cp<=0xFEFF)) return "ARB";
+  // 히브리어 (Hebrew)
+  if ((cp>=0x0590&&cp<=0x05FF)||(cp>=0xFB1D&&cp<=0xFB4F)) return "HEB";
+  // 그리스어 (Greek)
+  if ((cp>=0x0370&&cp<=0x03FF)||(cp>=0x1F00&&cp<=0x1FFF)) return "GRK";
+  // 데바나가리 (Devanagari - Hindi, Marathi, Nepali...)
+  if (cp>=0x0900&&cp<=0x097F) return "DEV";
+  // 벵골어 (Bengali)
+  if (cp>=0x0980&&cp<=0x09FF) return "BEN";
+  // 구르무키 (Gurmukhi - Punjabi)
+  if (cp>=0x0A00&&cp<=0x0A7F) return "GUR";
+  // 구자라트 (Gujarati)
+  if (cp>=0x0A80&&cp<=0x0AFF) return "GUJ";
+  // 오리야 (Odia)
+  if (cp>=0x0B00&&cp<=0x0B7F) return "ORI";
+  // 타밀어 (Tamil)
+  if (cp>=0x0B80&&cp<=0x0BFF) return "TAM";
+  // 텔루구 (Telugu)
+  if (cp>=0x0C00&&cp<=0x0C7F) return "TEL";
+  // 칸나다 (Kannada)
+  if (cp>=0x0C80&&cp<=0x0CFF) return "KAN";
+  // 말라얄람 (Malayalam)
+  if (cp>=0x0D00&&cp<=0x0D7F) return "MAL";
+  // 싱할라 (Sinhala)
+  if (cp>=0x0D80&&cp<=0x0DFF) return "SIN";
+  // 미얀마 (Myanmar/Burmese)
+  if ((cp>=0x1000&&cp<=0x109F)||(cp>=0xA9E0&&cp<=0xA9FF)||(cp>=0xAA60&&cp<=0xAA7F)) return "MYA";
+  // 크메르 (Khmer/Cambodian)
+  if ((cp>=0x1780&&cp<=0x17FF)||(cp>=0x19E0&&cp<=0x19FF)) return "KHM";
+  // 라오스 (Lao)
+  if (cp>=0x0E80&&cp<=0x0EFF) return "LAO";
+  // 티베트 (Tibetan)
+  if (cp>=0x0F00&&cp<=0x0FFF) return "TIB";
+  // 조지아 (Georgian)
+  if ((cp>=0x10A0&&cp<=0x10FF)||(cp>=0x2D00&&cp<=0x2D2F)) return "GEO";
+  // 아르메니아 (Armenian)
+  if ((cp>=0x0530&&cp<=0x058F)||(cp>=0xFB13&&cp<=0xFB17)) return "ARM";
+  // 에티오피아 (Ethiopic)
+  if ((cp>=0x1200&&cp<=0x137F)||(cp>=0x1380&&cp<=0x139F)||(cp>=0x2D80&&cp<=0x2DDF)||(cp>=0xAB01&&cp<=0xAB2F)) return "ETH";
+  // 라틴 (Latin + Extended)
+  if ((cp>=0x41&&cp<=0x5A)||(cp>=0x61&&cp<=0x7A)||(cp>=0x00C0&&cp<=0x024F)||
+      (cp>=0x0250&&cp<=0x02AF)||(cp>=0x1D00&&cp<=0x1DBF)||(cp>=0x1E00&&cp<=0x1EFF)||
+      (cp>=0x2C60&&cp<=0x2C7F)||(cp>=0xA720&&cp<=0xA7FF)) return "LAT";
+  // 이모지 (Emoji)
+  if ((cp>=0x1F300&&cp<=0x1F9FF)||(cp>=0x1FA00&&cp<=0x1FAFF)||(cp>=0x2600&&cp<=0x27BF)||(cp>=0x1F000&&cp<=0x1F0FF)) return "EMJ";
+  // Skip ASCII digits, spaces, punctuation
+  if (isSpace(cp) || isDigit(cp) || isPunct(cp)) return null;
+  return "ETC";
+}
+
+// Scan a single string for selected scripts (after applying keyword exclusions)
+function scanText(text, selectedCodes, excludeKws) {
+  let t = text ?? "";
+  for (const kw of excludeKws)
+    t = t.replace(new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "");
+
+  const results = new Map(); // code → { count, firstChar, snippet }
+  for (let i = 0; i < t.length; ) {
+    const cp = t.codePointAt(i);
+    const ch = String.fromCodePoint(cp);
+    const code = scriptOf(cp);
+    if (code && selectedCodes.has(code)) {
+      if (!results.has(code)) {
+        const s = Math.max(0, i - 10), e = Math.min(t.length, i + 10);
+        results.set(code, { count: 0, snippet: t.slice(s, e), firstChar: ch });
+      }
+      results.get(code).count++;
+    }
+    i += ch.length;
+  }
+  return results; // Map<code, {count, snippet, firstChar}>
+}
+
+// ── HELPERS ──
+function getSelectedCodes() {
+  const set = new Set();
+  SCRIPTS_FLAT.forEach(s => {
+    const cb = $(`cb_${s.code}`);
+    if (cb && cb.checked) set.add(s.code);
+  });
+  return set;
+}
+
+function getChunkSize() {
+  const v = parseInt($("chunkSizeInput").value || "0", 10);
+  return isNaN(v) || v <= 0 ? 0 : v;
+}
+
+function getExcludeKws() {
+  return ($("excludeInput").value || "")
+    .split(",").map(k => k.trim()).filter(k => k.length > 0);
+}
+
+function getChunkSlice() {
+  const sz = getChunkSize();
+  if (!sz) return allRows;
+  return allRows.slice(chunkPage * sz, (chunkPage + 1) * sz);
+}
+
+// ── TOAST ──
+function showToast(msg, type = "warn", duration = 2800) {
+  const wrap = $("toastWrap");
+  const el = document.createElement("div");
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => { el.classList.add("show"); });
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 250);
+  }, duration);
+}
+
+// ── BUILD ROWS (text mode) ──
+function buildRowsFromText() {
+  const lines = ($("mainInput").value || "")
+    .replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  return lines
+    .map((text, idx) => ({ key: `R${idx+1}`, line: idx + 1, text }));
+}
+
+// ── BUILD ROWS (excel mode) ──
+function buildRowsFromExcel() {
+  if (!excelWs || excelColIdx < 0) return [];
+  const out = [];
+  for (let r = 1; r <= excelRange.e.r; r++) {
+    const cellAddr = XLSX.utils.encode_cell({ r, c: excelColIdx });
+    const cell = excelWs[cellAddr];
+    const text = cell ? String(cell.v ?? "") : "";
+    out.push({ key: `R${r}`, line: r, text, excelRowIdx: r });
+  }
+  return out;
+}
+
+// ── UPDATE CHUNK NAV ──
+function updateChunkNav() {
+  const sz    = getChunkSize();
+  const total = allRows.length;
+  const info  = $("chunkInfo");
+  const prev  = $("prevBtn");
+  const next  = $("nextBtn");
+
+  if (!sz || !total) {
+    info.textContent = total > 0 ? `전체 ${total}행` : "-";
+    info.classList.remove("active");
+    prev.disabled = true; next.disabled = true;
+    return;
+  }
+  const totalPages = Math.ceil(total / sz);
+  const start = chunkPage * sz + 1;
+  const end   = Math.min((chunkPage + 1) * sz, total);
+  info.textContent = `${start}~${end} / ${total}`;
+  info.classList.add("active");
+  prev.disabled = chunkPage <= 0;
+  next.disabled = chunkPage >= totalPages - 1;
+}
+
+// ── RENDER TABLE ──
+function renderTable(chunkRows, detectionMap) {
+  const tbody = $("tbody");
+  tbody.innerHTML = "";
+
+  if (!chunkRows.length) {
+    tbody.innerHTML = `<tr><td colspan="3" class="empty" style="padding:14px 12px">데이터 없음</td></tr>`;
+    return;
+  }
+
+  // Show only rows with detections (or all if no scripts selected)
+  const selected = getSelectedCodes();
+  const showAll  = selected.size === 0;
+
+  const frag = document.createDocumentFragment();
+  let detectedCount = 0;
+
+  for (const row of chunkRows) {
+    const det = detectionMap.get(row.key);
+    if (!showAll && (!det || det.size === 0)) continue;
+    detectedCount++;
+
+    const tr = document.createElement("tr");
+
+    // Row number
+    const tdNo = document.createElement("td"); tdNo.className = "col-no";
+    tdNo.innerHTML = `<span class="row-no">${row.line}</span>`;
+
+    // Text
+    const tdText = document.createElement("td"); tdText.className = "col-text";
+    const textEl = document.createElement("div"); textEl.className = "row-text";
+    textEl.textContent = row.text;
+    tdText.appendChild(textEl);
+
+    // Detection chips
+    const tdDet = document.createElement("td"); tdDet.className = "col-det";
+    if (det && det.size > 0) {
+      const chips = document.createElement("div"); chips.className = "det-chips";
+      for (const [code, info] of det) {
+        const chip = document.createElement("span"); chip.className = "det-chip";
+        const sc = SCRIPTS_FLAT.find(s => s.code === code);
+        chip.innerHTML = `${code} <span class="cnt">${info.count}개</span>`;
+        chip.setAttribute("data-tip", `${sc ? sc.label : code}: ${info.count}개 | 예: ${info.snippet}`);
+        chips.appendChild(chip);
+      }
+      tdDet.appendChild(chips);
+    } else {
+      tdDet.innerHTML = `<span style="color:var(--muted);font-size:11px">없음</span>`;
+    }
+
+    tr.append(tdNo, tdText, tdDet);
+    frag.appendChild(tr);
+  }
+
+  if (!frag.childElementCount) {
+    tbody.innerHTML = `<tr><td colspan="3" class="empty" style="padding:14px 12px">현재 청크에서 선택된 언어의 문자가 발견되지 않았습니다.</td></tr>`;
+    $("resultMeta").textContent = "탐지 없음";
+  } else {
+    tbody.appendChild(frag);
+    $("resultMeta").textContent = `${detectedCount}행 탐지`;
+  }
+}
+
+// ── MAIN ANALYZE ──
+function analyzeAndRender(keepPage = false) {
+  // Build allRows
+  if (inputMode === "text") {
+    allRows = buildRowsFromText();
+  } else {
+    allRows = buildRowsFromExcel();
+  }
+
+  // Clamp page
+  if (!keepPage) chunkPage = 0;
+  const sz = getChunkSize();
+  if (sz > 0 && allRows.length > 0 && chunkPage * sz >= allRows.length)
+    chunkPage = Math.max(0, Math.ceil(allRows.length / sz) - 1);
+
+  rows = getChunkSlice();
+
+  // Detect
+  const selected = getSelectedCodes();
+  const kws      = getExcludeKws();
+  const detMap   = new Map();
+
+  for (const row of rows) {
+    const det = scanText(row.text, selected, kws);
+    detMap.set(row.key, det);
+  }
+
+  renderTable(rows, detMap);
+  updateChunkNav();
+  updateTextMeta();
+}
+
+// ── VALIDATE BEFORE ANALYZE ──
+function validateAndAnalyze(keepPage = false) {
+  const sz = getChunkSize();
+  if (!sz) {
+    const inp = $("chunkSizeInput");
+    inp.classList.remove("pulse");
+    void inp.offsetWidth; // reflow to restart animation
+    inp.classList.add("pulse");
+    showToast("청크 행 수를 입력해야 분석을 시작할 수 있습니다.", "warn");
+    inp.focus();
+    return;
+  }
+  const selected = getSelectedCodes();
+  if (selected.size === 0) {
+    showToast("탐지할 언어를 하나 이상 선택해주세요.", "warn");
+    return;
+  }
+  analyzeAndRender(keepPage);
+}
+
+// ── TEXT META ──
+function updateTextMeta() {
+  if (inputMode !== "text") { $("textLineMeta").textContent = ""; return; }
+  const lines = ($("mainInput").value || "").replace(/\r\n/g,"\n").split("\n");
+  const nonEmpty = lines.filter(l => l.trim()).length;
+  $("textLineMeta").textContent = `${nonEmpty}행`;
+}
+
+// ── RESET ──
+function resetResults() {
+  allRows = []; rows = []; chunkPage = 0;
+  $("tbody").innerHTML = `<tr><td colspan="3" class="empty" style="padding:16px 12px">① 청크 행 수 입력 → ② 탐지 언어 선택 → ③ 분석 버튼 클릭</td></tr>`;
+  $("chunkInfo").textContent = "-";
+  $("chunkInfo").classList.remove("active");
+  $("prevBtn").disabled = true;
+  $("nextBtn").disabled = true;
+  $("resultMeta").textContent = "-";
+}
+
+// ── SCRIPT GROUPS UI ──
+function buildScriptGroupsUI() {
+  const container = $("scriptGroups");
+  container.innerHTML = "";
+
+  for (const group of SCRIPT_GROUPS) {
+    const groupEl = document.createElement("div");
+
+    const header = document.createElement("div");
+    header.className = "sg-header";
+    header.textContent = group.name;
+    groupEl.appendChild(header);
+
+    const chips = document.createElement("div");
+    chips.className = "sg-scripts";
+
+    for (const s of group.scripts) {
+      const label = document.createElement("label");
+      label.className = "sc-label";
+      label.setAttribute("data-tip", s.note);
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.id = `cb_${s.code}`;
+      cb.checked = false; // DEFAULT: unchecked (검출 안 함)
+
+      const codeEl = document.createElement("span");
+      codeEl.className = "sc-code"; codeEl.textContent = s.code;
+
+      const nameEl = document.createElement("span");
+      nameEl.textContent = s.label;
+
+      label.append(cb, codeEl, nameEl);
+      cb.addEventListener("change", () => {
+        label.classList.toggle("on", cb.checked);
+        if (allRows.length > 0 && getChunkSize() > 0) analyzeAndRender(true);
+      });
+      chips.appendChild(label);
+    }
+    groupEl.appendChild(chips);
+    container.appendChild(groupEl);
+  }
+}
+
+// ── EXCEL LOAD ──
+function loadExcelFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      excelWb     = XLSX.read(e.target.result, { type: "array" });
+      const name  = excelWb.SheetNames[0];
+      excelWs     = excelWb.Sheets[name];
+      excelRange  = XLSX.utils.decode_range(excelWs["!ref"]);
+      excelColIdx = -1;
+
+      // Build column selector
+      const sel = $("colSelect");
+      sel.innerHTML = `<option value="">-- 열을 선택하세요 --</option>`;
+      for (let c = excelRange.s.c; c <= excelRange.e.c; c++) {
+        const cellAddr = XLSX.utils.encode_cell({ r: excelRange.s.r, c });
+        const cell = excelWs[cellAddr];
+        const header = cell ? String(cell.v ?? "") : "";
+        const letter = XLSX.utils.encode_col(c);
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = header ? `${letter} — ${header}` : `열 ${letter}`;
+        sel.appendChild(opt);
+      }
+
+      $("fileName").textContent = file.name;
+      const dataRows = excelRange.e.r - excelRange.s.r; // excluding header
+      excelTotalRows = dataRows;
+      $("excelStatEl").textContent = `${dataRows}행 · ${excelRange.e.c - excelRange.s.c + 1}열`;
+      $("excelInfo").classList.remove("hide");
+      $("uploadZoneWrap").classList.add("hide");
+      $("exportBtn").classList.remove("hide");
+
+      showToast(`"${file.name}" 로드 완료 (${dataRows}행)`, "ok");
+    } catch (err) {
+      showToast("파일 로드 실패: " + err.message, "error");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── EXCEL EXPORT ──
+function exportExcel() {
+  if (!excelWb || !excelWs || excelColIdx < 0) {
+    showToast("분석할 열을 먼저 선택해주세요.", "warn"); return;
+  }
+  const selected = getSelectedCodes();
+  if (selected.size === 0) {
+    showToast("탐지할 언어를 먼저 선택해주세요.", "warn"); return;
+  }
+  const kws = getExcludeKws();
+
+  // Clone workbook to avoid mutating original
+  const wb = XLSX.utils.book_new();
+  const wsData = XLSX.utils.sheet_to_json(excelWs, { header: 1, raw: false, defval: "" });
+
+  // Add header for new column
+  const resultColHeader = `탐지결과(${[...selected].join(",")})`;
+  if (wsData[0]) wsData[0].push(resultColHeader);
+
+  for (let i = 1; i < wsData.length; i++) {
+    const row = wsData[i];
+    const text = String(row[excelColIdx] ?? "");
+    const det = scanText(text, selected, kws);
+    if (det.size === 0) {
+      row.push("없음");
+    } else {
+      row.push([...det.entries()].map(([c, v]) => `${c}(${v.count}개)`).join(" "));
+    }
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, "탐지결과");
+  XLSX.writeFile(wb, "탐지결과.xlsx");
+  showToast("엑셀 파일 다운로드 완료!", "ok");
+}
+
+// ── MODE SWITCH ──
+function switchMode(mode) {
+  inputMode = mode;
+  $("modeText").classList.toggle("active",  mode === "text");
+  $("modeExcel").classList.toggle("active", mode === "excel");
+  $("textCard").classList.toggle("hide",    mode === "excel");
+  $("excelCard").classList.toggle("hide",   mode === "text");
+  $("exportBtn").classList.toggle("hide",   mode === "text");
+  resetResults();
+}
+
+// ── EVENTS ──
+$("analyzeBtn").addEventListener("click", () => validateAndAnalyze(false));
+
+$("clearBtn").addEventListener("click", () => {
+  $("mainInput").value = "";
+  resetResults();
+  updateTextMeta();
+});
+
+// Mode toggle
+$("modeText").addEventListener("click",  () => switchMode("text"));
+$("modeExcel").addEventListener("click", () => switchMode("excel"));
+
+// Chunk nav
+$("prevBtn").addEventListener("click", () => {
+  if (chunkPage > 0) { chunkPage--; analyzeAndRender(true); document.querySelector(".table-wrap").scrollTop = 0; }
+});
+$("nextBtn").addEventListener("click", () => {
+  const sz = getChunkSize();
+  if (sz > 0 && (chunkPage + 1) * sz < allRows.length) {
+    chunkPage++; analyzeAndRender(true); document.querySelector(".table-wrap").scrollTop = 0;
+  }
+});
+
+// Chunk size input — re-analyze from page 0
+$("chunkSizeInput").addEventListener("change", () => {
+  $("chunkSizeInput").classList.remove("err", "pulse");
+  if (allRows.length > 0 && getSelectedCodes().size > 0 && getChunkSize() > 0) {
+    chunkPage = 0; analyzeAndRender(false);
+  }
+});
+
+// Exception input — keepPage=true (don't reset chunk)
+let excludeTimer = null;
+$("excludeInput").addEventListener("input", () => {
+  clearTimeout(excludeTimer);
+  excludeTimer = setTimeout(() => {
+    if (allRows.length > 0 && getChunkSize() > 0) analyzeAndRender(true);
+  }, 400);
+});
+
+// Text input auto-update meta
+let textTimer = null;
+$("mainInput").addEventListener("input", () => {
+  updateTextMeta();
+  clearTimeout(textTimer);
+  textTimer = setTimeout(() => { /* no auto-analyze: user must click 분석 */ }, 400);
+});
+$("mainInput").addEventListener("paste", () => {
+  setTimeout(updateTextMeta, 10);
+});
+
+// Script select/deselect all
+$("selectAllScripts").addEventListener("click", () => {
+  SCRIPTS_FLAT.forEach(s => {
+    const cb = $(`cb_${s.code}`);
+    if (cb) { cb.checked = true; cb.closest(".sc-label").classList.add("on"); }
+  });
+  if (allRows.length > 0 && getChunkSize() > 0) analyzeAndRender(true);
+});
+$("clearAllScripts").addEventListener("click", () => {
+  SCRIPTS_FLAT.forEach(s => {
+    const cb = $(`cb_${s.code}`);
+    if (cb) { cb.checked = false; cb.closest(".sc-label").classList.remove("on"); }
+  });
+});
+
+// Export
+$("exportBtn").addEventListener("click", exportExcel);
+
+// Excel file input
+$("dropZone").addEventListener("click", () => $("excelFileInput").click());
+$("excelFileInput").addEventListener("change", e => {
+  if (e.target.files[0]) loadExcelFile(e.target.files[0]);
+});
+
+// Drag & drop
+$("dropZone").addEventListener("dragover", e => {
+  e.preventDefault(); $("dropZone").classList.add("drag-over");
+});
+$("dropZone").addEventListener("dragleave", () => $("dropZone").classList.remove("drag-over"));
+$("dropZone").addEventListener("drop", e => {
+  e.preventDefault(); $("dropZone").classList.remove("drag-over");
+  const file = e.dataTransfer.files[0];
+  if (file) loadExcelFile(file);
+});
+
+// Excel column selection
+$("colSelect").addEventListener("change", e => {
+  const v = e.target.value;
+  if (v === "") { excelColIdx = -1; return; }
+  excelColIdx = parseInt(v, 10);
+  allRows = buildRowsFromExcel();
+  chunkPage = 0;
+  resetResults();
+  showToast(`열 선택 완료 (${allRows.length}행). 탐지 언어를 선택하고 분석하세요.`, "ok");
+});
+
+// Excel reset
+$("excelResetBtn").addEventListener("click", () => {
+  excelWb = null; excelWs = null; excelRange = null; excelColIdx = -1;
+  $("excelFileInput").value = "";
+  $("excelInfo").classList.add("hide");
+  $("uploadZoneWrap").classList.remove("hide");
+  $("exportBtn").classList.add("hide");
+  resetResults();
+});
+
+// Nav active
+const cur = (location.pathname.split("/").pop() || "").toLowerCase();
+document.querySelectorAll(".nav a[data-page]").forEach(a => {
+  if ((a.dataset.page || "").toLowerCase() === cur) a.classList.add("active");
+});
+
+// ── INIT ──
+buildScriptGroupsUI();
+</script>
+</body>
+</html>
