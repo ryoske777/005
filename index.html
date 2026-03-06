@@ -71,8 +71,9 @@
       border-radius: 14px;
       padding: 14px;
     }
-    .grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
+    @media (max-width: 700px){ .grid{ grid-template-columns: 1fr; } }
     a.btn{
       display:block;
       text-decoration:none;
@@ -93,6 +94,7 @@
       <div class="gnb-brand">TOOLS</div>
       <div class="gnb-links">
         <a href="review.html">번역 검수</a>
+        <a href="strscan.html">문자열 탐지</a>
         <a href="placeholder.html">플레이스홀더 도구</a>
       </div>
     </div>
@@ -104,11 +106,15 @@
       <div class="grid">
         <a class="btn" href="review.html">
           <div class="title">번역 검수</div>
-          <div class="desc">원본과 번역 비교, 플레이스홀더·숫자·언어 문자 검사</div>
+          <div class="desc">원본과 번역 비교, 플레이스홀더·숫자·언어 문자 검사. 청크 분할 분석 지원.</div>
+        </a>
+        <a class="btn" href="strscan.html">
+          <div class="title">문자열 탐지</div>
+          <div class="desc">텍스트·엑셀에서 특정 언어 문자(한글·태국어·아랍어 등 27종) 탐지 및 결과 내보내기.</div>
         </a>
         <a class="btn" href="placeholder.html">
           <div class="title">플레이스홀더 도구</div>
-          <div class="desc">엑셀/CSV에서 플레이스홀더 제거 및 교체를 배치 처리</div>
+          <div class="desc">엑셀/CSV에서 플레이스홀더 제거 및 교체를 배치 처리.</div>
         </a>
       </div>
     </div>
