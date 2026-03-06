@@ -292,6 +292,8 @@
       font-size: 10px; font-weight: 800; color: #ffa657;
     }
     .det-chip .cnt { color: rgba(255,166,87,0.65); font-weight: 400; }
+    .det-words { font-size: 11px; color: var(--muted); line-height: 1.6; word-break: break-word; }
+    .detected-char { color: #ffa657; font-weight: 700; }
     .empty { color: var(--muted); font-size: 12px; }
 
     /* Mini buttons */
@@ -647,21 +649,35 @@ function scanText(text, selectedCodes, excludeKws) {
   for (const kw of excludeKws)
     t = t.replace(new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"), "");
 
-  const results = new Map(); // code → { count, firstChar, snippet }
-  for (let i = 0; i < t.length; ) {
+  const results = new Map(); // code → { count, firstChar, snippet, words }
+  let i = 0;
+  while (i < t.length) {
     const cp = t.codePointAt(i);
     const ch = String.fromCodePoint(cp);
     const code = scriptOf(cp);
     if (code && selectedCodes.has(code)) {
+      // 동일 스크립트의 연속 문자를 하나의 단어로 수집
+      let word = ch;
+      let j = i + ch.length;
+      while (j < t.length) {
+        const cp2 = t.codePointAt(j);
+        const ch2 = String.fromCodePoint(cp2);
+        if (scriptOf(cp2) === code) { word += ch2; j += ch2.length; }
+        else break;
+      }
       if (!results.has(code)) {
         const s = Math.max(0, i - 10), e = Math.min(t.length, i + 10);
-        results.set(code, { count: 0, snippet: t.slice(s, e), firstChar: ch });
+        results.set(code, { count: 0, snippet: t.slice(s, e), firstChar: ch, words: new Set() });
       }
-      results.get(code).count++;
+      const entry = results.get(code);
+      entry.count += word.length;
+      entry.words.add(word);
+      i = j;
+    } else {
+      i += ch.length;
     }
-    i += ch.length;
   }
-  return results; // Map<code, {count, snippet, firstChar}>
+  return results; // Map<code, {count, snippet, firstChar, words}>
 }
 
 // ── CHIP COUNT FUNCTIONS ──
@@ -804,6 +820,47 @@ function updateChunkNav() {
   next.disabled = chunkPage >= totalPages - 1;
 }
 
+// ── HIGHLIGHT DETECTED CHARS IN TEXT ──
+function buildHighlightedFrag(text, det, kws) {
+  if (!det || det.size === 0) {
+    const wrap = document.createElement("span");
+    wrap.textContent = text;
+    return wrap;
+  }
+  const detectedCodes = new Set(det.keys());
+  // Build exclusion mask over original text
+  const excluded = new Uint8Array(text.length);
+  for (const kw of kws) {
+    if (!kw) continue;
+    const re = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      for (let k = m.index; k < m.index + m[0].length; k++) excluded[k] = 1;
+    }
+  }
+  const wrap = document.createElement("span");
+  let pending = "";
+  const flush = () => { if (pending) { wrap.appendChild(document.createTextNode(pending)); pending = ""; } };
+  let i = 0;
+  while (i < text.length) {
+    const cp = text.codePointAt(i);
+    const ch = String.fromCodePoint(cp);
+    const code = scriptOf(cp);
+    if (!excluded[i] && code && detectedCodes.has(code)) {
+      flush();
+      const span = document.createElement("span");
+      span.className = "detected-char";
+      span.textContent = ch;
+      wrap.appendChild(span);
+    } else {
+      pending += ch;
+    }
+    i += ch.length;
+  }
+  flush();
+  return wrap;
+}
+
 // ── RENDER TABLE ──
 function renderTable(chunkRows, detectionMap) {
   const tbody = $("tbody");
@@ -817,6 +874,7 @@ function renderTable(chunkRows, detectionMap) {
   // Show only rows with detections (or all if no scripts selected)
   const selected = getSelectedCodes();
   const showAll  = selected.size === 0;
+  const kws      = getExcludeKws();
 
   const frag = document.createDocumentFragment();
   let detectedCount = 0;
@@ -832,24 +890,23 @@ function renderTable(chunkRows, detectionMap) {
     const tdNo = document.createElement("td"); tdNo.className = "col-no";
     tdNo.innerHTML = `<span class="row-no">${row.line}</span>`;
 
-    // Text
+    // Text — highlight detected chars in orange
     const tdText = document.createElement("td"); tdText.className = "col-text";
     const textEl = document.createElement("div"); textEl.className = "row-text";
-    textEl.textContent = row.text;
+    textEl.appendChild(buildHighlightedFrag(row.text, det, kws));
     tdText.appendChild(textEl);
 
-    // Detection chips
+    // Detection result — show actual detected words comma-separated
     const tdDet = document.createElement("td"); tdDet.className = "col-det";
     if (det && det.size > 0) {
-      const chips = document.createElement("div"); chips.className = "det-chips";
-      for (const [code, info] of det) {
-        const chip = document.createElement("span"); chip.className = "det-chip";
-        const sc = SCRIPTS_FLAT.find(s => s.code === code);
-        chip.innerHTML = `${code} <span class="cnt">${info.count}개</span>`;
-        chip.setAttribute("data-tip", `${sc ? sc.label : code}: ${info.count}개 | 예: ${info.snippet}`);
-        chips.appendChild(chip);
+      // Collect all words across all detected scripts
+      const allWords = [];
+      for (const [, info] of det) {
+        for (const w of info.words) allWords.push(w);
       }
-      tdDet.appendChild(chips);
+      const wordEl = document.createElement("div"); wordEl.className = "det-words";
+      wordEl.textContent = allWords.join(", ");
+      tdDet.appendChild(wordEl);
     } else {
       tdDet.innerHTML = `<span style="color:var(--muted);font-size:11px">없음</span>`;
     }
@@ -1069,7 +1126,9 @@ function exportExcel() {
     if (det.size === 0) {
       row.push("없음");
     } else {
-      row.push([...det.entries()].map(([c, v]) => `${c}(${v.count}개)`).join(" "));
+      const allWords = [];
+      for (const [, v] of det) for (const w of v.words) allWords.push(w);
+      row.push(allWords.join(", "));
     }
   }
 
