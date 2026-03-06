@@ -349,6 +349,32 @@
     .empty { color: var(--muted); font-size: 12px; }
     .hide  { display: none !important; }
 
+    /* ── CHUNK ── */
+    .chunk-wrap { display: flex; align-items: center; gap: 5px; }
+    .chunk-size-input {
+      width: 68px; padding: 5px 8px; border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: rgba(0,0,0,0.25); color: var(--text);
+      font-size: 12px; font-weight: 700; text-align: center; outline: none;
+    }
+    .chunk-size-input:focus { border-color: rgba(88,166,255,0.45); }
+    .chunk-size-input::-webkit-inner-spin-button,
+    .chunk-size-input::-webkit-outer-spin-button { opacity: 0.4; }
+    .chunk-nav { display: flex; align-items: center; gap: 4px; }
+    .chunk-info {
+      padding: 4px 10px; border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; min-width: 90px; text-align: center;
+    }
+    .chunk-info.active { color: var(--accent); border-color: rgba(88,166,255,0.3); }
+    .btn.nav-btn {
+      padding: 5px 10px; font-size: 13px; line-height: 1;
+      min-width: 30px; justify-content: center;
+    }
+    .btn.nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .btn.nav-btn:disabled:hover { background: var(--surface2); }
+
     /* Tooltip */
     [data-tip] { position: relative; }
     [data-tip]::after {
@@ -408,6 +434,19 @@
   <span class="stat"><span class="dot d-ph"></span><span id="statPh">PH 0</span></span>
   <span class="stat"><span class="dot d-num"></span><span id="statNum">NUM 0</span></span>
   <span class="stat"><span class="dot d-lang"></span><span id="statLang">LANG 0</span></span>
+
+  <div class="sep"></div>
+
+  <!-- Chunk controls -->
+  <div class="chunk-wrap" data-tip="한 번에 분석할 행 수. 0 또는 비워두면 전체 분석">
+    <span style="font-size:11px;font-weight:800;color:var(--muted)">청크</span>
+    <input class="chunk-size-input" id="chunkSizeInput" type="number" min="0" step="500" value="0" placeholder="전체">
+  </div>
+  <div class="chunk-nav">
+    <button class="btn ghost nav-btn" id="prevBtn" disabled>◀</button>
+    <span class="chunk-info" id="chunkInfo">전체</span>
+    <button class="btn ghost nav-btn" id="nextBtn" disabled>▶</button>
+  </div>
 </div>
 
 <!-- MAIN -->
@@ -584,7 +623,9 @@ const langExcludeInput= $("langExcludeInput");
 // Defaults
 [checkPH, checkNum, ignoreEmpty, tsvHeader, scanLeft, scanRight].forEach(el => el.checked = false);
 
-let rows = [];
+let rows    = [];
+let allRows = [];   // 전체 파싱 결과 캐시
+let chunkPage = 0;  // 현재 청크 페이지 (0-indexed)
 let rowElByKey = new Map();
 
 const SCRIPTS = [
@@ -853,9 +894,44 @@ function applyPreset(codes) {
   if (hasData()) analyzeAndRender();
 }
 
+// ── CHUNK HELPERS ──
+function getChunkSize() {
+  const v = parseInt($("chunkSizeInput").value || "0", 10);
+  return isNaN(v) || v <= 0 ? 0 : v;
+}
+function getChunkSlice() {
+  const sz = getChunkSize();
+  if (sz <= 0) return allRows;
+  return allRows.slice(chunkPage * sz, (chunkPage + 1) * sz);
+}
+function updateChunkNav() {
+  const sz    = getChunkSize();
+  const total = allRows.length;
+  const info  = $("chunkInfo");
+  const prev  = $("prevBtn");
+  const next  = $("nextBtn");
+  if (sz <= 0 || total === 0) {
+    info.textContent = total > 0 ? `전체 ${total}행` : "전체";
+    info.classList.remove("active");
+    prev.disabled = true; next.disabled = true;
+    return;
+  }
+  const totalPages = Math.ceil(total / sz);
+  const start = chunkPage * sz + 1;
+  const end   = Math.min((chunkPage + 1) * sz, total);
+  info.textContent = `${start}~${end} / ${total}`;
+  info.classList.add("active");
+  prev.disabled = chunkPage <= 0;
+  next.disabled = chunkPage >= totalPages - 1;
+}
+
 // ── STATS ──
 function updateStats(snapshotRows, analysis) {
-  statTotal.textContent = `행 ${snapshotRows.length}`;
+  const sz    = getChunkSize();
+  const total = allRows.length;
+  statTotal.textContent = sz > 0 && total > 0
+    ? `행 ${snapshotRows.length} / ${total}`
+    : `행 ${snapshotRows.length}`;
   statPh.textContent    = `PH ${analysis.phIssues.size}`;
   statNum.textContent   = `NUM ${analysis.numIssues.size}`;
   statLang.textContent  = `LANG ${analysis.langIssues.size}`;
@@ -1034,16 +1110,25 @@ function hasData() {
     : !!(leftText.value.trim() || rightText.value.trim());
 }
 
-function analyzeAndRender() {
+function analyzeAndRender(keepPage = false) {
   buildLangAllowUI();
   const { rows: r } = buildRows();
-  rows = r;
+  allRows = r;
+
+  // 페이지 범위 보정
+  if (!keepPage) chunkPage = 0;
+  const sz = getChunkSize();
+  if (sz > 0 && chunkPage * sz >= allRows.length)
+    chunkPage = Math.max(0, Math.ceil(allRows.length / sz) - 1);
+
+  rows = getChunkSlice();
   const analysis = analyzeRows(rows);
   updateStats(rows, analysis);
   renderTable(rows, analysis);
   renderLangPanel(analysis);
   renderPHPanel(analysis);
   renderNumPanel(analysis);
+  updateChunkNav();
 }
 
 function syncModeUI() {
@@ -1068,7 +1153,9 @@ function syncModeUI() {
   statNum.textContent = "NUM 0"; statLang.textContent = "LANG 0";
   phMeta.textContent = "0"; numMeta.textContent = "0"; langMeta.textContent = "0행";
   sumKOR.textContent = "0"; sumTHA.textContent = "0"; sumLAT.textContent = "0";
-  rowElByKey.clear(); rows = [];
+  allRows = []; rows = []; chunkPage = 0;
+  rowElByKey.clear();
+  updateChunkNav();
 }
 
 // ── EVENTS ──
@@ -1079,10 +1166,33 @@ clearBtn.addEventListener("click", () => {
   syncModeUI();
 });
 
+// Chunk navigation
+$("prevBtn").addEventListener("click", () => {
+  if (chunkPage > 0) {
+    chunkPage--;
+    analyzeAndRender(true);
+    document.querySelector('.table-wrap').scrollTop = 0;
+  }
+});
+$("nextBtn").addEventListener("click", () => {
+  const sz = getChunkSize();
+  if (sz > 0 && (chunkPage + 1) * sz < allRows.length) {
+    chunkPage++;
+    analyzeAndRender(true);
+    document.querySelector('.table-wrap').scrollTop = 0;
+  }
+});
+
+// Chunk size input → re-analyze from page 0
+$("chunkSizeInput").addEventListener("change", () => {
+  chunkPage = 0;
+  if (hasData()) analyzeAndRender();
+});
+
 copyBtn.addEventListener("click", async () => {
-  const { rows: r } = buildRows();
-  const analysis = analyzeRows(r);
-  const tsv = buildTSV(r, analysis);
+  // TSV 복사: 현재 청크만 내보냄 (전체가 필요하면 청크크기를 0으로)
+  const analysis = analyzeRows(rows);
+  const tsv = buildTSV(rows, analysis);
   try {
     await navigator.clipboard.writeText(tsv);
   } catch {
@@ -1108,7 +1218,12 @@ langExcludeInput.addEventListener("input", () => {
 let autoTimer = null;
 function scheduleAnalyze() {
   clearTimeout(autoTimer);
-  autoTimer = setTimeout(() => { if (hasData()) analyzeAndRender(); }, 400);
+  autoTimer = setTimeout(() => {
+    if (hasData()) {
+      chunkPage = 0;  // 새 데이터 → 첫 페이지로 리셋
+      analyzeAndRender();
+    }
+  }, 400);
 }
 [leftText, rightText, tsvInput].forEach(el => {
   el.addEventListener("input", scheduleAnalyze);
