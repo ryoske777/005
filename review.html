@@ -1630,6 +1630,22 @@ Status Ailment	Statusveränderung"></textarea>
     if (hasData && (scanLeft.checked || scanRight.checked)) analyzeAndRender();
   });
 
+  // 입력창 내용 넣으면 자동 분석 (debounce 0.6s)
+  let autoTimer = null;
+  function scheduleAutoAnalyze(){
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(()=>{
+      const mode = getMode();
+      const hasData =
+        (mode === "tsv" && tsvInput.value.trim()) ||
+        (mode !== "tsv" && (leftText.value.trim() || rightText.value.trim()));
+      if (hasData) analyzeAndRender();
+    }, 600);
+  }
+  leftText.addEventListener("input", scheduleAutoAnalyze);
+  rightText.addEventListener("input", scheduleAutoAnalyze);
+  tsvInput.addEventListener("input", scheduleAutoAnalyze);
+
   // presets
   presetAll.addEventListener("click", ()=>{
     applyPreset(SCRIPT_CATALOG.map(x => x.code));
