@@ -353,19 +353,19 @@
 
 <!-- TOOLBAR -->
 <div class="toolbar">
+  <div class="mode-grp">
+    <button id="modeExcel" class="active" data-tip="엑셀 파일을 업로드하고 특정 열을 분석합니다">엑셀</button>
+    <button id="modeText"  data-tip="텍스트를 직접 붙여넣어 분석합니다">텍스트</button>
+  </div>
+
+  <div class="sep"></div>
+
   <button class="btn primary" id="analyzeBtn">분석</button>
   <button class="btn ghost"   id="clearBtn">초기화</button>
 
   <div class="sep"></div>
 
-  <div class="mode-grp">
-    <button id="modeText"  class="active" data-tip="텍스트를 직접 붙여넣어 분석합니다">텍스트</button>
-    <button id="modeExcel" data-tip="엑셀 파일을 업로드하고 특정 열을 분석합니다">엑셀</button>
-  </div>
-
-  <div class="sep"></div>
-
-  <button class="btn success hide" id="exportBtn" data-tip="원본 엑셀에 탐지 결과 열을 추가하여 다운로드">엑셀 내보내기</button>
+  <button class="btn success" id="exportBtn" data-tip="원본 엑셀에 탐지 결과 열을 추가하여 다운로드">엑셀 내보내기</button>
 </div>
 
 <!-- MAIN -->
@@ -375,7 +375,7 @@
   <div class="left-col">
 
     <!-- TEXT mode -->
-    <div class="card" id="textCard">
+    <div class="card hide" id="textCard">
       <div class="card-head">
         <span class="card-title">텍스트 입력</span>
         <span class="card-meta" id="textLineMeta"></span>
@@ -384,7 +384,7 @@
     </div>
 
     <!-- EXCEL mode -->
-    <div class="card hide" id="excelCard">
+    <div class="card" id="excelCard">
       <div class="card-head">
         <span class="card-title">엑셀 파일</span>
         <button class="mini-btn" id="excelResetBtn">파일 변경</button>
@@ -430,8 +430,8 @@
           <div style="width:1px;height:16px;background:var(--border2);margin:0 2px"></div>
           <div class="mode-grp" id="countScopeGroup"
             data-tip="카운트 숫자 기준: 현재 검색 범위 vs 전체 데이터 (전체는 첫 분석 후 캐싱됨)">
-            <button class="active" id="scopeChunk">검색 기준</button>
-            <button id="scopeAll">전체 기준</button>
+            <button id="scopeChunk">검색 기준</button>
+            <button class="active" id="scopeAll">전체 기준</button>
           </div>
         </div>
       </div>
@@ -559,7 +559,7 @@ const SCRIPTS_FLAT = SCRIPT_GROUPS.flatMap(g => g.scripts);
 let allRows    = [];   // { key, line, text, excelRowIdx? }
 let chunkPage  = 0;
 let rows       = [];   // current chunk slice
-let inputMode  = "text"; // "text" | "excel"
+let inputMode  = "excel"; // "text" | "excel"
 let excelWb    = null;
 let excelWs    = null;
 let excelRange = null;
@@ -567,7 +567,7 @@ let excelColIdx = -1;
 let excelTotalRows = 0;
 
 // Count scope
-let countScope      = "chunk"; // "chunk" | "all"
+let countScope      = "all"; // "chunk" | "all"
 let allCountsCache  = null;    // Map<code, rowCount> over ALL rows
 let allCountsDirty  = true;    // invalidate when data/exceptions change
 
