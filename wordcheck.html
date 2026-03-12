@@ -26,6 +26,19 @@
       display: flex; flex-direction: column;
     }
 
+    /* ── 드래그오버 오버레이 ── */
+    .drop-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      background: rgba(13,17,23,0.92);
+      border: 3px dashed rgba(88,166,255,0.55);
+      margin: 10px; border-radius: 16px;
+      pointer-events: none; opacity: 0; transition: opacity .15s;
+    }
+    .drop-overlay.active { opacity: 1; }
+    .drop-overlay-icon { font-size: 40px; }
+    .drop-overlay-txt { font-size: 18px; font-weight: 800; color: var(--accent); }
+
     /* ── NAV ── */
     .nav {
       flex-shrink: 0;
@@ -63,8 +76,6 @@
       cursor: pointer; white-space: nowrap; transition: .1s;
     }
     .btn:hover { background: rgba(255,255,255,0.1); }
-    .btn.primary { background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.4); color: #79c0ff; }
-    .btn.primary:hover { background: rgba(88,166,255,0.25); }
     .btn.success { background: rgba(63,185,80,0.15); border-color: rgba(63,185,80,0.4); color: #56d364; }
     .btn.success:hover { background: rgba(63,185,80,0.25); }
     .btn[disabled] { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
@@ -112,14 +123,15 @@
     /* ── SETUP ── */
     .setup {
       flex-shrink: 0;
+      display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
       padding: 10px 16px;
       border-bottom: 1px solid var(--border);
       background: rgba(255,255,255,0.01);
-      display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;
     }
     .setup.hidden { display: none; }
-    .setup-block { display: flex; flex-direction: column; gap: 5px; }
+    .setup-item { display: flex; flex-direction: column; gap: 4px; }
     .setup-lbl { font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: .4px; }
+
     select {
       background: var(--surface2); color: var(--text);
       border: 1px solid var(--border2); border-radius: 8px;
@@ -129,138 +141,173 @@
     select:focus { outline: none; border-color: var(--accent); }
     select option { background: #161b22; }
 
-    .col-checklist { display: flex; flex-wrap: wrap; gap: 4px; max-width: 720px; }
-    .col-chk {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 4px 9px; border-radius: 8px;
-      border: 1px solid var(--border); font-size: 11px; font-weight: 700;
-      color: var(--muted); cursor: pointer; user-select: none; transition: .1s;
+    /* ── 커스텀 멀티셀렉트 드롭다운 ── */
+    .ms-wrap { position: relative; }
+    .ms-btn {
+      display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
+      min-width: 200px; padding: 5px 9px;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border2); border-radius: 8px;
+      font-size: 12px; font-weight: 700; cursor: pointer; transition: .1s;
+      white-space: nowrap;
     }
-    .col-chk input { display: none; }
-    .col-chk.on { border-color: rgba(255,166,87,0.45); background: rgba(255,166,87,0.1); color: var(--warn); }
-    .col-chk:not(.on):hover { background: var(--surface2); color: var(--text); }
-
-    .all-toggle {
-      font-size: 11px; font-weight: 700; color: var(--accent);
-      cursor: pointer; padding: 4px 0; white-space: nowrap;
-      text-decoration: underline; text-underline-offset: 2px;
+    .ms-btn:hover { background: rgba(255,255,255,0.1); }
+    .ms-btn.open { border-color: rgba(255,166,87,0.5); background: rgba(255,166,87,0.07); }
+    .ms-btn .ms-arrow { font-size: 9px; color: var(--muted); transition: transform .15s; }
+    .ms-btn.open .ms-arrow { transform: rotate(180deg); }
+    .ms-btn .ms-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+    .ms-panel {
+      position: absolute; top: calc(100% + 4px); left: 0; z-index: 300;
+      min-width: 230px; max-height: 280px; overflow-y: auto;
+      background: rgba(16,20,28,0.99); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 4px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+      display: none;
     }
-    .all-toggle:hover { color: #79c0ff; }
-
-    /* ── MAIN ── */
-    .main {
-      flex: 1; overflow: hidden;
-      display: grid; grid-template-columns: 380px 1fr;
-    }
-    @media (max-width: 900px) { .main { grid-template-columns: 1fr; } }
-
-    /* PANEL */
-    .panel { overflow-y: auto; border-right: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; }
-    .panel-head {
-      position: sticky; top: 0; z-index: 10; flex-shrink: 0;
-      padding: 8px 12px; border-bottom: 1px solid var(--border);
-      background: rgba(13,17,23,0.97);
-      font-size: 12px; font-weight: 800;
+    .ms-panel.open { display: block; }
+    .ms-header {
       display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 8px 7px; border-bottom: 1px solid var(--border); margin-bottom: 3px;
     }
-    .panel-meta { font-size: 11px; color: var(--muted); font-weight: 400; }
+    .ms-header-txt { font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+    .ms-all-btn { font-size: 11px; font-weight: 700; color: var(--accent); cursor: pointer; }
+    .ms-all-btn:hover { color: #79c0ff; }
+    .ms-item {
+      display: flex; align-items: center; gap: 7px;
+      padding: 6px 8px; border-radius: 6px; cursor: pointer;
+      font-size: 12px; color: var(--muted); transition: .1s;
+    }
+    .ms-item:hover { background: var(--surface2); color: var(--text); }
+    .ms-item.on { color: var(--warn); }
+    .ms-check {
+      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+      border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 900;
+    }
+    .ms-item.on .ms-check { background: rgba(255,166,87,0.25); border-color: rgba(255,166,87,0.6); color: var(--warn); }
 
-    .col-group-head {
-      padding: 6px 12px;
-      font-size: 11px; font-weight: 800; color: var(--warn);
-      background: rgba(255,166,87,0.07);
-      border-bottom: 1px solid var(--border);
-      text-transform: uppercase; letter-spacing: .4px;
-      position: sticky; top: 37px; z-index: 9;
+    /* ── 분석 버튼 (setup 안에 있는 버전) ── */
+    .btn.analyze {
+      background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.4); color: #79c0ff;
+      padding: 6px 18px; font-size: 13px;
     }
-    .issue-item { padding: 8px 12px; border-bottom: 1px solid var(--border); }
-    .issue-src {
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 11px; font-weight: 700; color: var(--text);
-      background: rgba(255,255,255,0.06); border: 1px solid var(--border2);
-      padding: 2px 7px; border-radius: 5px; display: inline-block;
-      max-width: 100%; overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 5px; vertical-align: middle;
-    }
-    .var-list { display: flex; flex-direction: column; gap: 3px; }
-    .var-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-    .vbadge {
-      font-size: 10px; font-weight: 700; flex-shrink: 0;
-      padding: 1px 6px; border-radius: 4px; border: 1px solid;
-    }
-    .vbadge.first { background: rgba(63,185,80,0.12); border-color: rgba(63,185,80,0.35); color: #56d364; }
-    .vbadge.diff  { background: rgba(255,166,87,0.12); border-color: rgba(255,166,87,0.4); color: var(--warn); }
-    .var-txt {
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 11px; color: var(--text);
-      max-width: 155px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0;
-    }
-    .var-rows { font-size: 10px; color: var(--muted); flex: 1; }
-    .jump-btn {
-      padding: 1px 6px; border-radius: 4px; flex-shrink: 0;
-      background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3);
-      color: var(--accent); font-size: 10px; font-weight: 700;
-      cursor: pointer; transition: .1s;
-    }
-    .jump-btn:hover { background: rgba(88,166,255,0.2); }
-    .empty-msg { padding: 24px 16px; font-size: 12px; color: var(--muted); display: block; }
+    .btn.analyze:hover { background: rgba(88,166,255,0.25); }
 
-    /* TABLE */
-    .table-wrap { overflow: auto; }
-    table { border-collapse: collapse; font-size: 12px; width: max-content; min-width: 100%; }
-    thead th {
-      position: sticky; top: 0; z-index: 5;
-      padding: 6px 10px; white-space: nowrap;
-      background: rgba(22,27,34,0.97);
-      border-bottom: 2px solid var(--border2);
-      color: var(--muted); font-size: 11px; font-weight: 800;
-      text-transform: uppercase; letter-spacing: .3px;
-      border-right: 1px solid var(--border);
+    /* ── CONTENT (전체 너비 불일치 목록) ── */
+    .content {
+      flex: 1; overflow-y: auto;
+      padding: 14px 16px 40px;
     }
-    thead th.col-src { color: var(--accent); border-bottom-color: rgba(88,166,255,0.5); }
-    thead th.col-tgt { color: var(--warn); border-bottom-color: rgba(255,166,87,0.5); }
-    tbody td {
-      padding: 5px 10px;
+
+    .content-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 60px 20px;
+      color: var(--muted); font-size: 13px; text-align: center;
+    }
+    .content-empty .ci-icon { font-size: 36px; opacity: .4; }
+
+    /* 요약 바 */
+    .summary-bar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding-bottom: 12px;
+    }
+    .s-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      border: 1px solid rgba(255,166,87,0.3);
+      background: rgba(255,166,87,0.08); color: var(--warn);
+    }
+    .s-chip.ok { border-color: rgba(63,185,80,0.3); background: rgba(63,185,80,0.08); color: #56d364; }
+    .s-chip.info { border-color: rgba(88,166,255,0.3); background: rgba(88,166,255,0.08); color: var(--accent); }
+
+    /* 불일치 카드 */
+    .issue-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 12px; overflow: hidden;
+    }
+    .icard-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px;
+      background: rgba(255,166,87,0.06);
       border-bottom: 1px solid var(--border);
+    }
+    .icard-colname { font-size: 12px; font-weight: 800; color: var(--warn); }
+    .icard-count { font-size: 11px; color: var(--muted); }
+    .icard-ok { font-size: 12px; font-weight: 700; color: #56d364; }
+
+    .icard-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .icard-table thead th {
+      padding: 7px 14px; text-align: left;
+      font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px;
+      color: var(--muted); background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid var(--border);
+    }
+    .icard-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .icard-table tbody tr:last-child { border-bottom: 0; }
+    .icard-table tbody tr.grp-first td { border-top: 1px solid rgba(255,255,255,0.06); }
+    .icard-table tbody tr.grp-first:first-child td { border-top: 0; }
+    .icard-table td {
+      padding: 6px 14px; vertical-align: middle;
+    }
+    .td-src {
+      font-family: ui-monospace, Consolas, monospace;
+      font-weight: 700; font-size: 12px; color: var(--text);
+      width: 200px; max-width: 240px;
       border-right: 1px solid var(--border);
-      max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      vertical-align: top; padding-top: 10px;
+      word-break: break-all;
     }
-    tbody td.rn {
-      color: var(--muted); font-size: 10px; text-align: right;
-      min-width: 38px; user-select: none; background: rgba(0,0,0,0.1);
+    .td-first {
+      color: #56d364; font-weight: 600;
+      border-right: 1px solid var(--border);
+      vertical-align: top; padding-top: 10px;
+      width: 220px; max-width: 260px; word-break: break-all;
     }
-    tbody td.hl-bad  { background: rgba(255,166,87,0.20) !important; color: var(--warn); font-weight: 700; }
-    tbody td.hl-first{ background: rgba(63,185,80,0.08); }
-    tbody tr.row-issue { background: rgba(255,166,87,0.04); }
-    tbody tr:hover td { background: rgba(255,255,255,0.025); }
-    tbody tr:hover td.hl-bad  { background: rgba(255,166,87,0.30) !important; }
-    tbody tr:hover td.hl-first{ background: rgba(63,185,80,0.14); }
-    tr.flash-row td { outline: 2px solid var(--accent); }
+    .td-bad { color: var(--warn); font-weight: 600; word-break: break-all; }
+    .td-rows {
+      font-size: 11px; color: var(--muted);
+      width: 140px; white-space: normal; word-break: break-all;
+    }
+    .badge-first {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px; margin-right: 4px;
+      background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.35); color: #56d364;
+    }
+    .badge-bad {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px; margin-right: 4px;
+      background: rgba(255,166,87,0.12); border: 1px solid rgba(255,166,87,0.4); color: var(--warn);
+    }
   </style>
 </head>
 <body>
 
+<!-- 드래그오버 오버레이 -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-overlay-icon">📂</div>
+  <div class="drop-overlay-txt">xlsx 파일을 여기에 놓으세요</div>
+</div>
+
 <!-- NAV -->
 <nav class="nav">
   <span class="nav-brand">TOOLS</span>
-  <a href="review.html"    data-page="review.html">번역 검수</a>
-  <a href="strscan.html"   data-page="strscan.html">문자열 탐지</a>
+  <a href="review.html"      data-page="review.html">번역 검수</a>
+  <a href="strscan.html"     data-page="strscan.html">문자열 탐지</a>
   <a href="placeholder.html" data-page="placeholder.html">플레이스홀더</a>
-  <a href="wordcheck.html" data-page="wordcheck.html">단어 일치 검수</a>
+  <a href="wordcheck.html"   data-page="wordcheck.html">단어 일치 검수</a>
 </nav>
 
 <!-- TOOLBAR -->
 <div class="toolbar">
-  <label class="btn upload-label" id="uploadLabel" data-tip="xlsx 엑셀 파일을 업로드합니다">
+  <label class="btn upload-label" id="uploadLabel" data-tip="클릭하거나 파일을 드래그해서 업로드">
     엑셀 업로드
     <input type="file" id="fileInput" accept=".xlsx,.xls">
   </label>
   <span id="fileNameBadge" style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-
-  <div class="sep"></div>
-
-  <button class="btn primary" id="analyzeBtn" disabled data-tip="선택한 열을 기준으로 번역 일치 여부를 분석합니다">분석</button>
-  <button class="btn success" id="downloadBtn" disabled data-tip="불일치 셀 색칠 + 결과 열이 추가된 xlsx 파일로 내보냅니다">엑셀 내보내기</button>
 
   <div class="sep"></div>
 
@@ -269,7 +316,7 @@
     <label data-tip="셀 내용 전체를 하나의 단위로 비교합니다">
       <input type="radio" name="mode" value="cell" checked> 셀 전체
     </label>
-    <label data-tip="셀 안의 단어를 공백·구분자로 분리하여 단어 단위로 추적합니다">
+    <label data-tip="소스·타겟 모두 단어 단위로 분리하여 위치 기반으로 매핑합니다">
       <input type="radio" name="mode" value="word"> 개별 단어
     </label>
   </div>
@@ -278,43 +325,47 @@
 
   <span class="stat"><span class="dot-w"></span><span id="statIssue">불일치 0</span></span>
   <span class="stat" id="statRows" style="display:none"><span class="dot-m"></span><span id="statRowsText"></span></span>
+
+  <div class="sep"></div>
+
+  <button class="btn success" id="downloadBtn" disabled data-tip="불일치 셀 색칠 + 결과 열이 추가된 xlsx 파일로 내보냅니다">엑셀 내보내기</button>
 </div>
 
 <!-- SETUP (파일 업로드 후 표시) -->
 <div class="setup hidden" id="setupArea">
-  <div class="setup-block">
-    <span class="setup-lbl">원본 열 (기준)</span>
+  <div class="setup-item">
+    <span class="setup-lbl">① 원본 열 (기준)</span>
     <select id="srcColSelect"></select>
   </div>
-  <div class="setup-block">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">
-      <span class="setup-lbl">비교 열 (번역 결과, 복수 선택)</span>
-      <span class="all-toggle" id="allToggle">전체 선택</span>
+  <div class="setup-item">
+    <span class="setup-lbl">② 비교 열 (번역 결과, 복수 선택)</span>
+    <div class="ms-wrap" id="msWrap">
+      <button class="ms-btn" id="msBtn" type="button">
+        <span class="ms-label" id="msBtnLabel">열을 선택하세요</span>
+        <span class="ms-arrow">▼</span>
+      </button>
+      <div class="ms-panel" id="msPanel">
+        <div class="ms-header">
+          <span class="ms-header-txt">비교 열 선택</span>
+          <span class="ms-all-btn" id="msAllBtn">전체 선택</span>
+        </div>
+        <div id="msItems"></div>
+      </div>
     </div>
-    <div class="col-checklist" id="tgtColList"></div>
+  </div>
+  <div class="setup-item" style="padding-bottom:1px">
+    <span class="setup-lbl" style="visibility:hidden">분석</span>
+    <button class="btn analyze" id="analyzeBtn" disabled>③ 분석</button>
   </div>
 </div>
 
-<!-- MAIN -->
-<div class="main">
-  <!-- PANEL (왼쪽: 불일치 목록) -->
-  <div class="panel">
-    <div class="panel-head">
-      <span>불일치 목록</span>
-      <span class="panel-meta" id="panelMeta">분석 전</span>
-    </div>
-    <div id="panelBody">
-      <span class="empty-msg">엑셀 파일을 업로드하고 열을 선택한 뒤 분석하세요.</span>
-    </div>
+<!-- CONTENT (전체 너비 불일치 목록) -->
+<div class="content" id="content">
+  <div class="content-empty" id="emptyState">
+    <div class="ci-icon">📋</div>
+    <div>엑셀 파일을 업로드하고 열을 선택한 뒤 분석 버튼을 누르세요.</div>
   </div>
-
-  <!-- TABLE (오른쪽: 전체 데이터) -->
-  <div class="table-wrap" id="tableWrap">
-    <table>
-      <thead id="tableHead"></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
+  <div id="issueArea" style="display:none"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -324,12 +375,11 @@ const $ = id => document.getElementById(id);
 
 // ── STATE ──
 let headers   = [];
-let dataRows  = [];    // array of arrays
-let analysisResult = null;   // Map<tgtColName, {issues, tgtColIdx}>
-let badSet    = null;   // Map<rowIdx, Set<colIdx>>  — 불일치 셀
-let firstSet  = null;   // Map<rowIdx, Set<colIdx>>  — 최초 번역 셀
-let resultMap = null;   // Map<rowIdx, Map<tgtColIdx, [{src, firstTgt, currentTgt}]>> — 결과 열용
-let rowElems  = [];     // tr 요소 배열 (rowIdx → tr)
+let dataRows  = [];
+let analysisResult = null;
+let badSet    = null;
+let firstSet  = null;
+let resultMap = null;
 
 // ── UTILS ──
 function escHtml(s) {
@@ -337,6 +387,26 @@ function escHtml(s) {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function cellStr(v) { return String(v ?? '').trim(); }
+
+// ── DRAG AND DROP ──
+let dragCounter = 0;
+document.addEventListener('dragenter', e => {
+  e.preventDefault();
+  dragCounter++;
+  $('dropOverlay').classList.add('active');
+});
+document.addEventListener('dragleave', () => {
+  dragCounter--;
+  if (dragCounter <= 0) { dragCounter = 0; $('dropOverlay').classList.remove('active'); }
+});
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  dragCounter = 0;
+  $('dropOverlay').classList.remove('active');
+  const file = e.dataTransfer?.files[0];
+  if (file && /\.(xlsx|xls)$/i.test(file.name)) loadFile(file);
+});
 
 // ── FILE UPLOAD ──
 $('fileInput').addEventListener('change', e => {
@@ -372,13 +442,14 @@ function loadFile(file) {
       $('analyzeBtn').disabled = false;
 
       populateColumnSelectors();
-      // Reset
-      analysisResult = null; badSet = null; firstSet = null; resultMap = null; rowElems = [];
-      $('panelMeta').textContent = '분석 전';
-      $('panelBody').innerHTML = '<span class="empty-msg">열을 선택하고 분석 버튼을 누르세요.</span>';
-      $('tableHead').innerHTML = ''; $('tableBody').innerHTML = '';
+
+      // 상태 리셋
+      analysisResult = null; badSet = null; firstSet = null; resultMap = null;
       $('statIssue').textContent = '불일치 0';
       $('downloadBtn').disabled = true;
+      $('emptyState').style.display = '';
+      $('issueArea').style.display = 'none';
+      $('issueArea').innerHTML = '';
     } catch(err) {
       alert('파일을 읽지 못했습니다: ' + err.message);
     }
@@ -396,35 +467,81 @@ function populateColumnSelectors() {
     srcSel.appendChild(opt);
   });
 
-  const tgtList = $('tgtColList');
-  tgtList.innerHTML = '';
+  const msItems = $('msItems');
+  msItems.innerHTML = '';
   headers.forEach((h, i) => {
-    const label = document.createElement('label');
-    label.className = 'col-chk';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.value = i;
-    cb.addEventListener('change', () => label.classList.toggle('on', cb.checked));
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(h));
-    tgtList.appendChild(label);
+    const item = document.createElement('div');
+    item.className = 'ms-item';
+    item.dataset.idx = i;
+    item.innerHTML = `<span class="ms-check"></span><span class="ms-name">${escHtml(h)}</span>`;
+    item.addEventListener('click', () => {
+      item.classList.toggle('on');
+      const chk = item.querySelector('.ms-check');
+      chk.textContent = item.classList.contains('on') ? '✓' : '';
+      updateMsBtnLabel();
+    });
+    msItems.appendChild(item);
   });
+  updateMsBtnLabel();
 }
 
-// 전체 선택 / 해제 토글
-let allSelected = false;
-$('allToggle').addEventListener('click', () => {
-  allSelected = !allSelected;
-  $('allToggle').textContent = allSelected ? '전체 해제' : '전체 선택';
-  $('tgtColList').querySelectorAll('.col-chk').forEach(label => {
-    const cb = label.querySelector('input');
-    cb.checked = allSelected;
-    label.classList.toggle('on', allSelected);
+// 멀티셀렉트 버튼 텍스트 업데이트
+function updateMsBtnLabel() {
+  const selected = [...$('msItems').querySelectorAll('.ms-item.on')];
+  const label = $('msBtnLabel');
+  if (!selected.length) {
+    label.textContent = '열을 선택하세요';
+    $('msBtn').style.color = 'var(--muted)';
+  } else if (selected.length === 1) {
+    label.textContent = selected[0].querySelector('.ms-name').textContent;
+    $('msBtn').style.color = 'var(--warn)';
+  } else {
+    label.textContent = `${selected.length}개 열 선택됨`;
+    $('msBtn').style.color = 'var(--warn)';
+  }
+}
+
+// 드롭다운 토글
+$('msBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const panel = $('msPanel');
+  const btn   = $('msBtn');
+  const open  = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+});
+document.addEventListener('click', e => {
+  if (!$('msWrap').contains(e.target)) {
+    $('msPanel').classList.remove('open');
+    $('msBtn').classList.remove('open');
+  }
+});
+
+// 전체 선택/해제
+let msAllState = false;
+$('msAllBtn').addEventListener('click', () => {
+  msAllState = !msAllState;
+  $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
+  $('msItems').querySelectorAll('.ms-item').forEach(item => {
+    const chk = item.querySelector('.ms-check');
+    if (msAllState) { item.classList.add('on'); chk.textContent = '✓'; }
+    else            { item.classList.remove('on'); chk.textContent = ''; }
   });
+  updateMsBtnLabel();
 });
 
 function getMode()        { return document.querySelector('input[name="mode"]:checked')?.value ?? 'cell'; }
 function getSrcColIdx()   { return parseInt($('srcColSelect').value, 10); }
-function getTgtColIdxArr(){ return [...$('tgtColList').querySelectorAll('input:checked')].map(cb => parseInt(cb.value, 10)); }
+function getTgtColIdxArr(){
+  return [...$('msItems').querySelectorAll('.ms-item.on')].map(el => parseInt(el.dataset.idx, 10));
+}
+
+// ── SPLIT HELPER ──
+const SPLIT_RE = /[\s\t\r\n,，、;；·\-\/]+/;
+function splitWords(s) {
+  return s.split(SPLIT_RE)
+    .map(w => w.replace(/^['"()\[\]{}<>«»]+|['"()\[\]{}<>«»]+$/g, '').trim())
+    .filter(w => w.length >= 1);
+}
 
 // ── ANALYSIS ──
 function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, mode) {
@@ -432,38 +549,44 @@ function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, mode) {
 
   for (const tgtColIdx of tgtColIdxArr) {
     const tgtColName = headers[tgtColIdx];
-    // tracker: srcKey → { firstTgt, firstRow, variants: Map<tgt, rowIdx[]> }
-    const tracker = new Map();
+    const tracker = new Map(); // srcKey → { firstTgt, firstRow, variants: Map<tgt, rowIdx[]> }
 
     rows.forEach((row, rowIdx) => {
       const srcCell = cellStr(row[srcColIdx]);
       const tgtCell = cellStr(row[tgtColIdx]);
       if (!srcCell) return;
 
-      let keys;
+      let pairs; // [{srcKey, tgtKey}]
+
       if (mode === 'word') {
-        // 공백·구분자 기준으로 분리, 2글자 이상 단어만 추적
-        keys = [...new Set(
-          srcCell.split(/[\s\t\r\n,，、;；·\-\/]+/)
-            .map(w => w.replace(/^['"()\[\]{}<>]+|['"()\[\]{}<>]+$/g, '').trim())
-            .filter(w => w.length >= 2)
-        )];
-        if (!keys.length) keys = [srcCell];
+        // 소스·타겟 모두 단어 분리 → 위치 기반 매핑
+        const srcWords = splitWords(srcCell);
+        const tgtWords = splitWords(tgtCell);
+
+        if (!srcWords.length) {
+          pairs = [{ srcKey: srcCell, tgtKey: tgtCell }];
+        } else {
+          pairs = srcWords.map((sw, i) => ({
+            srcKey: sw,
+            // 대응하는 타겟 단어가 있으면 그것만 사용, 없으면 전체 셀 폴백
+            tgtKey: i < tgtWords.length ? tgtWords[i] : tgtCell
+          }));
+        }
       } else {
-        keys = [srcCell];
+        pairs = [{ srcKey: srcCell, tgtKey: tgtCell }];
       }
 
-      for (const key of keys) {
-        if (!tracker.has(key)) {
-          tracker.set(key, {
-            firstTgt: tgtCell,
+      for (const { srcKey, tgtKey } of pairs) {
+        if (!tracker.has(srcKey)) {
+          tracker.set(srcKey, {
+            firstTgt: tgtKey,
             firstRow: rowIdx,
-            variants: new Map([[tgtCell, [rowIdx]]])
+            variants: new Map([[tgtKey, [rowIdx]]])
           });
         } else {
-          const entry = tracker.get(key);
-          if (!entry.variants.has(tgtCell)) entry.variants.set(tgtCell, []);
-          entry.variants.get(tgtCell).push(rowIdx);
+          const entry = tracker.get(srcKey);
+          if (!entry.variants.has(tgtKey)) entry.variants.set(tgtKey, []);
+          entry.variants.get(tgtKey).push(rowIdx);
         }
       }
     });
@@ -481,9 +604,9 @@ function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, mode) {
 }
 
 function buildIssueSets(analysisResult) {
-  const bad       = new Map();  // Map<rowIdx, Set<colIdx>>
-  const first     = new Map();  // Map<rowIdx, Set<colIdx>>
-  const rMap      = new Map();  // Map<rowIdx, Map<tgtColIdx, [{src, firstTgt, currentTgt}]>>
+  const bad   = new Map();
+  const first = new Map();
+  const rMap  = new Map(); // rowIdx → Map<tgtColIdx, [{src, firstTgt, currentTgt}]>
 
   for (const [, { issues, tgtColIdx }] of analysisResult) {
     for (const issue of issues) {
@@ -492,7 +615,6 @@ function buildIssueSets(analysisResult) {
           if (tgt !== issue.firstTgt) {
             if (!bad.has(rowIdx)) bad.set(rowIdx, new Set());
             bad.get(rowIdx).add(tgtColIdx);
-            // 결과 열용 상세 정보
             if (!rMap.has(rowIdx)) rMap.set(rowIdx, new Map());
             const colMap = rMap.get(rowIdx);
             if (!colMap.has(tgtColIdx)) colMap.set(tgtColIdx, []);
@@ -526,142 +648,126 @@ function doAnalyze() {
   for (const [, { issues }] of analysisResult) total += issues.length;
   $('statIssue').textContent = `불일치 ${total}`;
 
-  renderTable(srcColIdx, tgtColIdxArr);
-  renderPanel();
+  renderIssues(srcColIdx, tgtColIdxArr);
   $('downloadBtn').disabled = false;
 }
 
-// ── TABLE ──
-function renderTable(srcColIdx, tgtColIdxArr) {
-  const thead = $('tableHead');
-  const tbody = $('tableBody');
-  const tgtSet = new Set(tgtColIdxArr);
-  rowElems = [];
+// ── RENDER ISSUES ──
+function renderIssues(srcColIdx, tgtColIdxArr) {
+  const area = $('issueArea');
+  area.innerHTML = '';
+  $('emptyState').style.display = 'none';
+  area.style.display = '';
 
-  // 헤더
-  const htr = document.createElement('tr');
-  const thNo = document.createElement('th'); thNo.textContent = '#'; htr.appendChild(thNo);
-  headers.forEach((h, i) => {
-    const th = document.createElement('th');
-    th.textContent = h;
-    if (i === srcColIdx)   th.className = 'col-src';
-    else if (tgtSet.has(i)) th.className = 'col-tgt';
-    htr.appendChild(th);
-  });
-  thead.innerHTML = ''; thead.appendChild(htr);
-
-  // 데이터 행 (최대 5000행 DOM 표시)
-  const MAX = 5000;
-  const frag = document.createDocumentFragment();
-  dataRows.slice(0, MAX).forEach((row, rowIdx) => {
-    const tr = document.createElement('tr');
-    if (badSet.has(rowIdx)) tr.className = 'row-issue';
-    tr.dataset.row = rowIdx;
-
-    const tdNo = document.createElement('td');
-    tdNo.className = 'rn'; tdNo.textContent = rowIdx + 2;
-    tr.appendChild(tdNo);
-
-    row.forEach((val, colIdx) => {
-      const td = document.createElement('td');
-      td.textContent = cellStr(val);
-      if      (badSet.has(rowIdx)   && badSet.get(rowIdx).has(colIdx))   td.className = 'hl-bad';
-      else if (firstSet.has(rowIdx) && firstSet.get(rowIdx).has(colIdx)) td.className = 'hl-first';
-      tr.appendChild(td);
-    });
-
-    frag.appendChild(tr);
-    rowElems[rowIdx] = tr;
-  });
-
-  tbody.innerHTML = '';
-  tbody.appendChild(frag);
-
-  if (dataRows.length > MAX) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = headers.length + 1;
-    td.style.cssText = 'text-align:center;color:var(--muted);padding:10px;font-size:11px';
-    td.textContent = `표시 한도(${MAX.toLocaleString()}행)를 초과하여 일부만 표시합니다. 엑셀 내보내기에는 전체 데이터가 포함됩니다.`;
-    tr.appendChild(td); tbody.appendChild(tr);
+  let totalIssues = 0;
+  let okCols = 0;
+  for (const [, { issues }] of analysisResult) {
+    if (issues.length) totalIssues += issues.length;
+    else okCols++;
   }
-}
 
-// ── PANEL ──
-function renderPanel() {
-  const body = $('panelBody');
-  body.innerHTML = '';
-
-  let total = 0;
-  for (const [, { issues }] of analysisResult) total += issues.length;
-
-  if (!total) {
-    body.innerHTML = '<span class="empty-msg">불일치 항목이 없습니다 ✓</span>';
-    $('panelMeta').textContent = '이상 없음';
-    return;
+  // 요약 바
+  const bar = document.createElement('div');
+  bar.className = 'summary-bar';
+  if (totalIssues) {
+    const c1 = document.createElement('span');
+    c1.className = 's-chip';
+    c1.textContent = `불일치 ${totalIssues}건`;
+    bar.appendChild(c1);
   }
-  $('panelMeta').textContent = `${total}개 불일치`;
+  if (okCols) {
+    const c2 = document.createElement('span');
+    c2.className = 's-chip ok';
+    c2.textContent = `이상 없는 열 ${okCols}개`;
+    bar.appendChild(c2);
+  }
+  const c3 = document.createElement('span');
+  c3.className = 's-chip info';
+  c3.textContent = `전체 ${dataRows.length}행 · ${tgtColIdxArr.length}개 비교 열`;
+  bar.appendChild(c3);
+  area.appendChild(bar);
 
+  // 카드 렌더
   for (const [colName, { issues }] of analysisResult) {
-    if (!issues.length) continue;
+    const card = document.createElement('div');
+    card.className = 'issue-card';
 
-    const grpHead = document.createElement('div');
-    grpHead.className = 'col-group-head';
-    grpHead.textContent = `${colName}  ·  ${issues.length}개`;
-    body.appendChild(grpHead);
+    // 카드 헤더
+    const head = document.createElement('div');
+    head.className = 'icard-head';
+    if (issues.length) {
+      head.innerHTML = `<span class="icard-colname">${escHtml(colName)}</span>`
+        + `<span class="icard-count">${issues.length}개 불일치</span>`;
+    } else {
+      head.innerHTML = `<span class="icard-colname">${escHtml(colName)}</span>`
+        + `<span class="icard-ok">✓ 이상 없음</span>`;
+    }
+    card.appendChild(head);
+
+    if (!issues.length) { area.appendChild(card); continue; }
+
+    // 테이블
+    const table = document.createElement('table');
+    table.className = 'icard-table';
+    table.innerHTML = `<thead><tr>
+      <th>원본 (기준 단어)</th>
+      <th>최초 번역</th>
+      <th>불일치 번역</th>
+      <th>행 번호 (Excel)</th>
+    </tr></thead>`;
+    const tbody = document.createElement('tbody');
 
     for (const issue of issues) {
-      const item = document.createElement('div');
-      item.className = 'issue-item';
+      // 불일치 번역만 수집 (firstTgt 제외)
+      const diffs = [...issue.variants.entries()].filter(([tgt]) => tgt !== issue.firstTgt);
+      const rowCount = diffs.length;
 
-      const srcEl = document.createElement('div');
-      srcEl.className = 'issue-src';
-      srcEl.textContent = issue.src; srcEl.title = issue.src;
-      item.appendChild(srcEl);
+      diffs.forEach(([tgt, rowIdxArr], di) => {
+        const tr = document.createElement('tr');
+        if (di === 0) tr.className = 'grp-first';
 
-      const varList = document.createElement('div');
-      varList.className = 'var-list';
+        // 원본 셀 (rowspan)
+        if (di === 0) {
+          const tdSrc = document.createElement('td');
+          tdSrc.className = 'td-src';
+          tdSrc.rowSpan = rowCount;
+          tdSrc.textContent = issue.src;
+          tr.appendChild(tdSrc);
 
-      // 정렬: 최초 번역 먼저
-      const sorted = [...issue.variants.entries()].sort((a, b) =>
-        a[0] === issue.firstTgt ? -1 : b[0] === issue.firstTgt ? 1 : 0
-      );
+          // 최초 번역 셀 (rowspan)
+          const tdFirst = document.createElement('td');
+          tdFirst.className = 'td-first';
+          tdFirst.rowSpan = rowCount;
+          const bFirst = document.createElement('span');
+          bFirst.className = 'badge-first'; bFirst.textContent = '최초';
+          tdFirst.appendChild(bFirst);
+          tdFirst.appendChild(document.createTextNode(issue.firstTgt || '(비어있음)'));
+          tr.appendChild(tdFirst);
+        }
 
-      for (const [tgt, rowIdxArr] of sorted) {
-        const isFirst = tgt === issue.firstTgt;
-        const vrow = document.createElement('div');
-        vrow.className = 'var-row';
+        // 불일치 번역
+        const tdBad = document.createElement('td');
+        tdBad.className = 'td-bad';
+        const bBad = document.createElement('span');
+        bBad.className = 'badge-bad'; bBad.textContent = '불일치';
+        tdBad.appendChild(bBad);
+        tdBad.appendChild(document.createTextNode(tgt || '(비어있음)'));
+        tr.appendChild(tdBad);
 
-        const badge = document.createElement('span');
-        badge.className = `vbadge ${isFirst ? 'first' : 'diff'}`;
-        badge.textContent = isFirst ? '최초' : '불일치';
+        // 행 번호
+        const tdRows = document.createElement('td');
+        tdRows.className = 'td-rows';
+        const nums = rowIdxArr.slice(0, 10).map(i => i + 2).join(', ');
+        tdRows.textContent = nums + (rowIdxArr.length > 10 ? ` 외 ${rowIdxArr.length - 10}건` : '');
+        tr.appendChild(tdRows);
 
-        const txt = document.createElement('span');
-        txt.className = 'var-txt';
-        txt.textContent = tgt || '(비어있음)'; txt.title = tgt;
-
-        const rowNums = rowIdxArr.slice(0, 6).map(i => i + 2).join(', ');
-        const rowsEl = document.createElement('span');
-        rowsEl.className = 'var-rows';
-        rowsEl.textContent = `행: ${rowNums}${rowIdxArr.length > 6 ? ` +${rowIdxArr.length - 6}` : ''}`;
-
-        const jBtn = document.createElement('button');
-        jBtn.className = 'jump-btn'; jBtn.textContent = '이동';
-        jBtn.addEventListener('click', () => {
-          const tr = rowElems[rowIdxArr[0]];
-          if (!tr) return;
-          tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          tr.classList.add('flash-row');
-          setTimeout(() => tr.classList.remove('flash-row'), 1400);
-        });
-
-        vrow.append(badge, txt, rowsEl, jBtn);
-        varList.appendChild(vrow);
-      }
-
-      item.appendChild(varList);
-      body.appendChild(item);
+        tbody.appendChild(tr);
+      });
     }
+
+    table.appendChild(tbody);
+    card.appendChild(table);
+    area.appendChild(card);
   }
 }
 
@@ -678,7 +784,6 @@ async function downloadExcel() {
     const tgtColIdxArr = getTgtColIdxArr();
     const tgtSet       = new Set(tgtColIdxArr);
 
-    // 비교 열별 결과 열 정의
     const resultCols = [...analysisResult.entries()].map(([colName, { tgtColIdx }]) => ({
       colName, tgtColIdx, header: `${colName}_검수결과`
     }));
@@ -686,7 +791,7 @@ async function downloadExcel() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('단어일치검수');
 
-    // ── 헤더 행 ──
+    // 헤더 행
     const headerRow = ws.addRow([...headers, ...resultCols.map(rc => rc.header)]);
     headerRow.height = 20;
     headerRow.eachCell((cell, colNum) => {
@@ -710,7 +815,7 @@ async function downloadExcel() {
 
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
-    // ── 데이터 행 ──
+    // 데이터 행
     dataRows.forEach((row, rowIdx) => {
       const resultVals = resultCols.map(rc => {
         if (!resultMap.has(rowIdx) || !resultMap.get(rowIdx).has(rc.tgtColIdx)) return '';
@@ -726,13 +831,11 @@ async function downloadExcel() {
       excelRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
         const ci = colNum - 1;
         if (ci < headers.length) {
-          // 불일치 셀 → 주황 배경
           if (badSet.has(rowIdx) && badSet.get(rowIdx).has(ci)) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
             cell.font = { bold: true, color: { argb: 'FFC45300' } };
           }
         } else {
-          // 결과 열
           const rcIdx = ci - headers.length;
           const rc = resultCols[rcIdx];
           if (rc && resultMap.has(rowIdx) && resultMap.get(rowIdx).has(rc.tgtColIdx)) {
@@ -744,7 +847,7 @@ async function downloadExcel() {
       });
     });
 
-    // ── 열 너비 자동 조정 ──
+    // 열 너비
     ws.columns.forEach((col, ci) => {
       if (ci >= headers.length) { col.width = 32; return; }
       let maxLen = (headers[ci] || '').length + 2;
