@@ -71,9 +71,9 @@
       border-radius: 14px;
       padding: 14px;
     }
-    .grid{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    @media (max-width: 900px){ .grid{ grid-template-columns: 1fr; } }
-    @media (max-width: 700px){ .grid{ grid-template-columns: 1fr; } }
+    .grid{ display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 1100px){ .grid{ grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px){ .grid{ grid-template-columns: 1fr; } }
     a.btn{
       display:block;
       text-decoration:none;
@@ -96,6 +96,7 @@
         <a href="review.html">번역 검수</a>
         <a href="strscan.html">문자열 탐지</a>
         <a href="placeholder.html">플레이스홀더 도구</a>
+        <a href="header_viewer.html">ZIP Excel 헤더 뷰어</a>
       </div>
     </div>
   </nav>
@@ -115,6 +116,10 @@
         <a class="btn" href="placeholder.html">
           <div class="title">플레이스홀더 도구</div>
           <div class="desc">엑셀/CSV에서 플레이스홀더 제거 및 교체를 배치 처리.</div>
+        </a>
+        <a class="btn" href="header_viewer.html">
+          <div class="title">ZIP Excel 헤더 뷰어</div>
+          <div class="desc">ZIP 안의 엑셀 파일 헤더를 일괄 확인. 로케일 컬럼 순서 검증 및 결과 내보내기 지원.</div>
         </a>
       </div>
     </div>
