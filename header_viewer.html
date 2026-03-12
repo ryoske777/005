@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZIP Excel Header Viewer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #21262d;
+      --border:    #30363d;
+      --border2:   #3d444d;
+      --text:      #e6edf3;
+      --muted:     #7d8590;
+      --accent:    #6366f1;
+      --accent-lt: #818cf8;
+      --accent-bg: rgba(99,102,241,.12);
+      --green:     #3fb950;
+      --green-bg:  rgba(63,185,80,.1);
+      --yellow:    #d29922;
+      --red:       #f85149;
+      --red-bg:    rgba(248,81,73,.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 28px;
+      background: rgba(22,27,34,.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .app-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+    .app-sub   { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+    /* ── Main ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* ── Drop Zone ── */
+    #drop-zone {
+      border: 2px dashed var(--border2);
+      border-radius: 16px;
+      padding: 64px 32px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface);
+      transition: border-color .2s, background .2s, transform .15s;
+      user-select: none;
+    }
+    #drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+      transform: scale(1.005);
+    }
+    #drop-zone.has-file {
+      padding: 24px 32px;
+      border-style: solid;
+      border-color: var(--green);
+      background: var(--green-bg);
+    }
+    .drop-icon { font-size: 52px; margin-bottom: 14px; pointer-events: none; }
+    .drop-title { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .drop-desc  { font-size: 13px; color: var(--muted); }
+    .pick-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 18px;
+      padding: 9px 22px;
+      background: var(--accent);
+      color: #fff; border-radius: 8px; font-size: 13px;
+      font-weight: 500; cursor: pointer;
+      transition: background .2s, opacity .2s;
+    }
+    .pick-btn:hover { background: var(--accent-lt); }
+    #file-input { display: none; }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      margin-top: 20px;
+      display: none;
+    }
+    .progress-bar {
+      height: 4px; border-radius: 4px; background: var(--surface2); overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--accent); border-radius: 4px;
+      transition: width .25s ease; width: 0%;
+    }
+    .progress-label {
+      margin-top: 8px; font-size: 12px; color: var(--muted); text-align: center;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: none;
+      align-items: center; gap: 12px;
+      margin-top: 28px; margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 4px 12px;
+      border: 1px solid var(--border); border-radius: 20px;
+      font-size: 12px; color: var(--muted);
+      background: var(--surface);
+    }
+    .stat-pill b { color: var(--text); }
+
+    .search-wrap {
+      position: relative; flex: 1; min-width: 200px;
+    }
+    .search-wrap .icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px; pointer-events: none;
+    }
+    #search {
+      width: 100%; padding: 9px 12px 9px 38px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; color: var(--text); font-size: 13px; outline: none;
+      transition: border-color .2s;
+    }
+    #search:focus { border-color: var(--accent); }
+    #search::placeholder { color: var(--muted); }
+
+    .reset-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--muted); font-size: 12px;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Toggle All ── */
+    .expand-all-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 8px 14px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 8px; color: var(--muted); font-size: 12px;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .expand-all-btn:hover { border-color: var(--accent); color: var(--accent-lt); }
+
+    /* ── File Cards ── */
+    #results { display: none; }
+
+    .results-grid { display: flex; flex-direction: column; gap: 12px; }
+
+    .file-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color .15s;
+    }
+    .file-card:hover { border-color: var(--border2); }
+    .file-card.highlight { border-color: var(--accent); }
+
+    .card-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      cursor: pointer; user-select: none;
+      transition: background .15s;
+    }
+    .card-header:hover { background: var(--surface2); }
+
+    .file-emoji { font-size: 22px; flex-shrink: 0; }
+    .file-info { flex: 1; min-width: 0; }
+    .file-name {
+      font-weight: 600; font-size: 14px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-path {
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .card-badges { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+    .badge {
+      padding: 2px 9px; border-radius: 12px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-sheet {
+      background: var(--accent-bg); color: var(--accent-lt);
+    }
+    .badge-err {
+      background: var(--red-bg); color: var(--red);
+    }
+    .chevron {
+      color: var(--muted); font-size: 14px;
+      transition: transform .2s; flex-shrink: 0;
+    }
+    .file-card.collapsed .chevron { transform: rotate(-90deg); }
+
+    .card-body {
+      border-top: 1px solid var(--border);
+    }
+    .file-card.collapsed .card-body { display: none; }
+
+    /* ── Sheet Section ── */
+    .sheet-section {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sheet-section:last-child { border-bottom: none; }
+
+    .sheet-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .sheet-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); flex-shrink: 0;
+    }
+    .col-count {
+      font-weight: 400; font-size: 10px;
+      padding: 1px 7px; background: var(--surface2);
+      border-radius: 10px;
+    }
+
+    .headers-list {
+      display: flex; flex-wrap: wrap; gap: 7px;
+    }
+    .h-chip {
+      display: flex; align-items: baseline; gap: 5px;
+      padding: 4px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      max-width: 220px;
+      transition: border-color .15s, background .15s;
+    }
+    .h-chip:hover { border-color: var(--accent); background: var(--accent-bg); }
+    .h-num  { font-size: 10px; color: var(--muted); font-weight: 700; flex-shrink: 0; }
+    .h-text { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .h-empty { color: var(--muted); font-style: italic; font-size: 11px; }
+
+    .empty-row { font-size: 12px; color: var(--muted); font-style: italic; }
+    .error-box {
+      font-size: 12px; color: var(--red);
+      padding: 6px 12px; background: var(--red-bg);
+      border-radius: 6px; border: 1px solid rgba(248,81,73,.25);
+    }
+
+    /* ── Locale Order Badge ── */
+    .locale-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 10px; border-radius: 10px;
+      font-size: 12px; font-weight: 800;
+      letter-spacing: .03em; cursor: default; user-select: none;
+      flex-shrink: 0;
+    }
+    .locale-ok {
+      background: rgba(63,185,80,.15); color: #3fb950;
+      border: 1px solid rgba(63,185,80,.35);
+    }
+    .locale-delta {
+      background: rgba(210,153,34,.15); color: #d29922;
+      border: 1px solid rgba(210,153,34,.4);
+    }
+    .locale-fail {
+      background: rgba(248,81,73,.15); color: #f85149;
+      border: 1px solid rgba(248,81,73,.35);
+    }
+    .locale-skip {
+      background: var(--surface2); color: var(--muted);
+      border: 1px solid var(--border); font-weight: 600;
+    }
+    .detail-list {
+      margin-top: 10px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .detail-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; padding: 5px 10px;
+      border-radius: 6px; flex-wrap: wrap;
+    }
+    .detail-row.row-fail {
+      background: rgba(248,81,73,.07);
+      border: 1px solid rgba(248,81,73,.2);
+    }
+    .detail-row.row-delta {
+      background: rgba(210,153,34,.07);
+      border: 1px solid rgba(210,153,34,.2);
+    }
+    .mm-label  { color: var(--muted); font-weight: 700; min-width: 36px; flex-shrink: 0; }
+    .mm-exp    { color: #3fb950; }
+    .mm-got    { color: #f85149; }
+    .mm-mid    { color: var(--text); }
+    .mm-arrow  { color: var(--muted); flex-shrink: 0; }
+    .mm-extra  { color: #d29922; }
+    .mm-extra code {
+      background: rgba(210,153,34,.12); border-radius: 3px;
+      padding: 1px 5px; font-size: 10px; font-family: monospace;
+    }
+
+    /* ── No results ── */
+    .no-results {
+      text-align: center; padding: 48px 20px;
+      color: var(--muted); font-size: 14px;
+      display: none;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">📊</div>
+  <span class="app-title">ZIP Excel Header Viewer</span>
+  <span class="app-sub">압축 파일 내 엑셀 헤더 뷰어</span>
+</header>
+
+<main>
+  <!-- Drop zone -->
+  <div id="drop-zone">
+    <div class="drop-icon">📦</div>
+    <div class="drop-title">ZIP 파일을 여기에 드래그 앤 드롭</div>
+    <div class="drop-desc">.xlsx · .xlsm · .xls · .xlsb · .csv · .ods · .tsv 파일을 자동으로 탐지합니다</div>
+    <label class="pick-btn" for="file-input">📂 파일 선택</label>
+    <input type="file" id="file-input" accept=".zip,application/zip">
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-label" id="progress-label">처리 중...</div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar" id="toolbar">
+    <div class="stat-pill">📁 파일 <b id="s-files">0</b>개</div>
+    <div class="stat-pill">🗂 시트 <b id="s-sheets">0</b>개</div>
+    <div class="stat-pill">🔤 컬럼 <b id="s-cols">0</b>개</div>
+    <div class="stat-pill">✔ <b id="s-ok" style="color:#3fb950">0</b> &nbsp;△ <b id="s-delta" style="color:#d29922">0</b> &nbsp;✘ <b id="s-fail" style="color:#f85149">0</b></div>
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input id="search" type="text" placeholder="파일명, 시트명, 컬럼명으로 검색…" autocomplete="off" />
+    </div>
+    <button class="expand-all-btn" id="expand-all-btn">▼ 모두 펼치기</button>
+    <button class="reset-btn" id="reset-btn">✕ 초기화</button>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="results-grid" id="results-grid"></div>
+    <div class="no-results" id="no-results">검색 결과가 없습니다 🔍</div>
+  </div>
+</main>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const EXCEL_EXTS = new Set(['.xlsx','.xlsm','.xls','.xlsb','.csv','.ods','.tsv']);
+
+// 기준 로케일 순서 (ko-KR 이후)
+const EXPECTED_LOCALE_ORDER = [
+  'ko-KR','en-US','ja-JP','zh-CN','zh-TW',
+  'th-TH','pt-BR','vi-VN','es-ES','de-DE',
+  'fr-FR','id-ID','tr-TR'
+];
+
+/**
+ * 서브시퀀스 기반 로케일 순서 검증.
+ *
+ * 1) ko-KR 위치를 찾고, 그 이후에서 EXPECTED_LOCALE_ORDER 에 속하는
+ *    컬럼만 추출하여 순서를 비교합니다.
+ * 2) 순서가 맞고 누락 없음  → status: 'ok'   (✔ O)
+ * 3) 순서가 맞고 누락 없지만 사이에 다른 컬럼이 끼어있음
+ *                            → status: 'delta' (△)
+ * 4) 누락이 있거나 순서가 진짜 다름 → status: 'fail'  (✘ X)
+ */
+function checkLocaleOrder(headers) {
+  const startIdx = headers.findIndex(h => h.trim() === 'ko-KR');
+  if (startIdx === -1) return { found: false };
+
+  const localeSet = new Set(EXPECTED_LOCALE_ORDER);
+  const relevant  = headers.slice(startIdx);
+
+  // 로케일에 해당하는 컬럼만 위치와 함께 추출
+  const foundLocales = [];
+  relevant.forEach((h, i) => {
+    const t = h.trim();
+    if (localeSet.has(t)) foundLocales.push({ locale: t, ri: i });
+  });
+
+  const foundSet = new Set(foundLocales.map(f => f.locale));
+  const missing  = EXPECTED_LOCALE_ORDER.filter(l => !foundSet.has(l));
+
+  // 실제로 찾은 로케일의 "기대 순서"와 "실제 순서" 비교
+  const expectedFiltered = EXPECTED_LOCALE_ORDER.filter(l => foundSet.has(l));
+  const actualOrder      = foundLocales.map(f => f.locale);
+  const orderOk          = actualOrder.join('|') === expectedFiltered.join('|');
+
+  // ── O: 모두 있고, 순서도 맞고, 연속적 ──────────────────────────────
+  if (missing.length === 0 && orderOk) {
+    const gaps = [];
+    for (let i = 1; i < foundLocales.length; i++) {
+      const gap = foundLocales[i].ri - foundLocales[i - 1].ri - 1;
+      if (gap > 0) {
+        const extras = relevant
+          .slice(foundLocales[i - 1].ri + 1, foundLocales[i].ri)
+          .map(h => h.trim()).filter(h => h !== '');
+        if (extras.length) gaps.push({ after: foundLocales[i - 1].locale, before: foundLocales[i].locale, extras });
+      }
+    }
+    if (gaps.length === 0) return { found: true, status: 'ok' };
+    // △: 순서는 맞는데 사이에 다른 컬럼 존재
+    return { found: true, status: 'delta', gaps };
+  }
+
+  // ── X: 누락 있거나 순서 다름 ─────────────────────────────────────
+  const issues = [];
+
+  if (missing.length > 0) {
+    issues.push({ type: 'missing', locales: missing });
+  }
+
+  if (!orderOk) {
+    const wrong = [];
+    const len = Math.max(actualOrder.length, expectedFiltered.length);
+    for (let i = 0; i < len; i++) {
+      const exp = expectedFiltered[i] || '(없음)';
+      const got = actualOrder[i]      || '(없음)';
+      if (exp !== got) {
+        wrong.push({
+          seq:    i + 1,
+          expected: exp,
+          actual:   got,
+          absPos: startIdx + (foundLocales[i]?.ri ?? i) + 1
+        });
+      }
+    }
+    if (wrong.length) issues.push({ type: 'order', mismatches: wrong });
+  }
+
+  return { found: true, status: 'fail', issues };
+}
+const FILE_ICONS = {
+  '.xlsx': '📗', '.xlsm': '📗', '.xlsb': '📗',
+  '.xls': '📘',
+  '.csv': '📄', '.tsv': '📄',
+  '.ods': '📙',
+};
+const SHEET_COLORS = [
+  '#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6',
+  '#f97316','#8b5cf6','#06b6d4','#84cc16','#e11d48'
+];
+
+// fix icon lookup
+function fileIcon(ext) {
+  return FILE_ICONS[ext] || '📊';
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let allData = [];   // [{path, name, ext, error, sheets:[{name,headers:[]}]}]
+let allExpanded = true;
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const dropZone    = document.getElementById('drop-zone');
+const fileInput   = document.getElementById('file-input');
+const progressWrap= document.getElementById('progress-wrap');
+const progressFill= document.getElementById('progress-fill');
+const progressLbl = document.getElementById('progress-label');
+const toolbar     = document.getElementById('toolbar');
+const resultsEl   = document.getElementById('results');
+const grid        = document.getElementById('results-grid');
+const noResults   = document.getElementById('no-results');
+const searchEl    = document.getElementById('search');
+const resetBtn    = document.getElementById('reset-btn');
+const expandBtn   = document.getElementById('expand-all-btn');
+
+// ── Drop Zone Events ───────────────────────────────────────────────────────
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+dropZone.addEventListener('click', e => {
+  if (e.target.tagName !== 'LABEL') fileInput.click();
+});
+
+resetBtn.addEventListener('click', reset);
+expandBtn.addEventListener('click', toggleAll);
+searchEl.addEventListener('input', () => renderFiltered(searchEl.value.trim().toLowerCase()));
+
+// ── File Processing ────────────────────────────────────────────────────────
+async function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.zip')) {
+    alert('ZIP 파일만 지원합니다.');
+    return;
+  }
+
+  reset(false);
+  setProgress(0, `"${file.name}" 읽는 중…`);
+  showProgress(true);
+
+  let zip;
+  try {
+    zip = await JSZip.loadAsync(file);
+  } catch (e) {
+    alert('ZIP 파일을 열 수 없습니다: ' + e.message);
+    showProgress(false);
+    return;
+  }
+
+  // Collect excel entries (skip hidden/system files)
+  const entries = [];
+  zip.forEach((relPath, entry) => {
+    if (entry.dir) return;
+    const parts = relPath.split('/');
+    if (parts.some(p => p.startsWith('.'))) return; // hidden
+    const ext = extOf(relPath);
+    if (EXCEL_EXTS.has(ext)) entries.push({ relPath, entry, ext });
+  });
+
+  if (entries.length === 0) {
+    showProgress(false);
+    alert('ZIP 파일 안에 지원하는 엑셀 파일이 없습니다.\n(.xlsx, .xls, .xlsm, .xlsb, .csv, .ods, .tsv)');
+    return;
+  }
+
+  // Process each file with progress
+  for (let i = 0; i < entries.length; i++) {
+    const { relPath, entry, ext } = entries[i];
+    const pct = Math.round(((i) / entries.length) * 100);
+    setProgress(pct, `(${i+1}/${entries.length}) ${baseName(relPath)}`);
+
+    let result = { path: relPath, name: baseName(relPath), ext, sheets: [], error: null };
+    try {
+      const ab = await entry.async('arraybuffer');
+      const wb = XLSX.read(ab, { type: 'array', sheetRows: 1 }); // only read 1 row for speed
+      for (const sName of wb.SheetNames) {
+        const ws = wb.Sheets[sName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        const first = rows.length > 0 ? rows[0].map(v => (v === null || v === undefined ? '' : String(v))) : [];
+        result.sheets.push({ name: sName, headers: first });
+      }
+    } catch (e) {
+      result.error = e.message || '읽기 오류';
+    }
+    allData.push(result);
+    // yield to UI
+    await tick();
+  }
+
+  setProgress(100, '완료!');
+  await sleep(300);
+  showProgress(false);
+
+  // Update drop zone appearance
+  dropZone.classList.add('has-file');
+  dropZone.querySelector('.drop-icon').textContent = '✅';
+  dropZone.querySelector('.drop-title').textContent = `"${file.name}" 처리 완료`;
+  dropZone.querySelector('.drop-desc').textContent = `엑셀 파일 ${entries.length}개 발견`;
+
+  updateStats();
+  toolbar.style.display = 'flex';
+  resultsEl.style.display = 'block';
+  renderFiltered('');
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderFiltered(q) {
+  grid.innerHTML = '';
+  let shown = 0;
+  for (const item of allData) {
+    const card = buildCard(item, q);
+    if (card) { grid.appendChild(card); shown++; }
+  }
+  noResults.style.display = shown === 0 && allData.length > 0 ? 'block' : 'none';
+}
+
+function buildCard(item, q) {
+  // Filter logic
+  const matchFile  = !q || item.name.toLowerCase().includes(q) || item.path.toLowerCase().includes(q);
+  const matchSheet = !q || item.sheets.some(s =>
+    s.name.toLowerCase().includes(q) ||
+    s.headers.some(h => h.toLowerCase().includes(q))
+  );
+  if (!matchFile && !matchSheet) return null;
+
+  const card = document.createElement('div');
+  card.className = 'file-card' + (allExpanded ? '' : ' collapsed');
+
+  // ── Card header ──
+  const hdr = document.createElement('div');
+  hdr.className = 'card-header';
+  hdr.innerHTML = `
+    <span class="file-emoji">${fileIcon(item.ext)}</span>
+    <div class="file-info">
+      <div class="file-name">${hl(item.name, q)}</div>
+      <div class="file-path">${hl(item.path, q)}</div>
+    </div>
+    <div class="card-badges">
+      ${item.error
+        ? `<span class="badge badge-err">오류</span>`
+        : `<span class="badge badge-sheet">시트 ${item.sheets.length}개</span>`}
+    </div>
+    <span class="chevron">▾</span>
+  `;
+  hdr.addEventListener('click', () => card.classList.toggle('collapsed'));
+  card.appendChild(hdr);
+
+  // ── Card body ──
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  if (item.error) {
+    const sec = document.createElement('div');
+    sec.className = 'sheet-section';
+    sec.innerHTML = `<div class="error-box">⚠️ ${escHtml(item.error)}</div>`;
+    body.appendChild(sec);
+  } else {
+    item.sheets.forEach((sheet, si) => {
+      // If filtering, skip sheets that don't match
+      if (q && !matchFile) {
+        const sMatch = sheet.name.toLowerCase().includes(q) ||
+                       sheet.headers.some(h => h.toLowerCase().includes(q));
+        if (!sMatch) return;
+      }
+
+      const sec = document.createElement('div');
+      sec.className = 'sheet-section';
+      const dotColor = SHEET_COLORS[si % SHEET_COLORS.length];
+
+      // ── 로케일 순서 검증 ──
+      const localeCheck = checkLocaleOrder(sheet.headers);
+      let localeBadgeHtml = '';
+      let localeDetailHtml = '';
+
+      if (!localeCheck.found) {
+        localeBadgeHtml = `<span class="locale-badge locale-skip" title="ko-KR 컬럼을 찾을 수 없어 검증 불가">— ko-KR 없음</span>`;
+
+      } else if (localeCheck.status === 'ok') {
+        localeBadgeHtml = `<span class="locale-badge locale-ok" title="로케일 순서가 기준과 완전히 일치합니다">✔ O</span>`;
+
+      } else if (localeCheck.status === 'delta') {
+        const totalExtras = localeCheck.gaps.reduce((s, g) => s + g.extras.length, 0);
+        localeBadgeHtml = `<span class="locale-badge locale-delta" title="순서는 맞지만 로케일 사이에 추가 컬럼 ${totalExtras}개가 있습니다">△ 순서 맞음</span>`;
+        const rows = localeCheck.gaps.map(g =>
+          `<div class="detail-row row-delta">
+            <span class="mm-label">사이</span>
+            <span class="mm-mid">${escHtml(g.after)}</span>
+            <span class="mm-arrow">↔</span>
+            <span class="mm-mid">${escHtml(g.before)}</span>
+            <span class="mm-arrow">·</span>
+            <span class="mm-extra">추가 컬럼: ${g.extras.map(e => `<code>${escHtml(e)}</code>`).join(' ')}</span>
+          </div>`
+        ).join('');
+        localeDetailHtml = `<div class="detail-list">${rows}</div>`;
+
+      } else { // fail
+        localeBadgeHtml = `<span class="locale-badge locale-fail" title="로케일이 누락되었거나 순서가 다릅니다">✘ X</span>`;
+        const rows = [];
+        for (const issue of localeCheck.issues) {
+          if (issue.type === 'missing') {
+            rows.push(`<div class="detail-row row-fail">
+              <span class="mm-label">누락</span>
+              <span class="mm-got">${issue.locales.map(l => escHtml(l)).join(', ')}</span>
+            </div>`);
+          } else if (issue.type === 'order') {
+            for (const m of issue.mismatches) {
+              rows.push(`<div class="detail-row row-fail">
+                <span class="mm-label">${m.seq}번째</span>
+                <span class="mm-exp">기준: ${escHtml(m.expected)}</span>
+                <span class="mm-arrow">→</span>
+                <span class="mm-got">실제: ${escHtml(m.actual)}</span>
+              </div>`);
+            }
+          }
+        }
+        localeDetailHtml = `<div class="detail-list">${rows.join('')}</div>`;
+      }
+
+      let headersHtml = '';
+      if (sheet.headers.length === 0) {
+        headersHtml = '<div class="empty-row">첫 번째 행이 비어 있습니다</div>';
+      } else {
+        const chips = sheet.headers.map((h, i) => {
+          const text = h.trim() === '' ? '<span class="h-empty">(빈 셀)</span>' : `<span class="h-text">${hl(escHtml(h), q)}</span>`;
+          return `<div class="h-chip" title="${escHtml(h)}"><span class="h-num">${i+1}</span>${text}</div>`;
+        }).join('');
+        headersHtml = `<div class="headers-list">${chips}</div>`;
+      }
+
+      sec.innerHTML = `
+        <div class="sheet-label">
+          <span class="sheet-dot" style="background:${dotColor}"></span>
+          ${hl(escHtml(sheet.name), q)}
+          <span class="col-count">${sheet.headers.length}개 컬럼</span>
+          ${localeBadgeHtml}
+        </div>
+        ${headersHtml}
+        ${localeDetailHtml}
+      `;
+      body.appendChild(sec);
+    });
+
+    if (body.children.length === 0) {
+      const sec = document.createElement('div');
+      sec.className = 'sheet-section';
+      sec.innerHTML = '<div class="empty-row">시트가 없습니다</div>';
+      body.appendChild(sec);
+    }
+  }
+
+  card.appendChild(body);
+  return card;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function updateStats() {
+  let sheets = 0, cols = 0, okCnt = 0, deltaCnt = 0, failCnt = 0;
+  for (const d of allData) {
+    sheets += d.sheets.length;
+    for (const s of d.sheets) {
+      cols += s.headers.filter(h => h.trim() !== '').length;
+      const chk = checkLocaleOrder(s.headers);
+      if (chk.found) {
+        if      (chk.status === 'ok')    okCnt++;
+        else if (chk.status === 'delta') deltaCnt++;
+        else                             failCnt++;
+      }
+    }
+  }
+  document.getElementById('s-files').textContent  = allData.length;
+  document.getElementById('s-sheets').textContent = sheets;
+  document.getElementById('s-cols').textContent   = cols;
+  document.getElementById('s-ok').textContent     = okCnt;
+  document.getElementById('s-delta').textContent  = deltaCnt;
+  document.getElementById('s-fail').textContent   = failCnt;
+}
+
+function toggleAll() {
+  allExpanded = !allExpanded;
+  document.querySelectorAll('.file-card').forEach(c => {
+    allExpanded ? c.classList.remove('collapsed') : c.classList.add('collapsed');
+  });
+  expandBtn.textContent = allExpanded ? '▲ 모두 접기' : '▼ 모두 펼치기';
+}
+
+function reset(renderUI = true) {
+  allData = [];
+  allExpanded = true;
+  if (renderUI) {
+    dropZone.classList.remove('has-file');
+    dropZone.querySelector('.drop-icon').textContent  = '📦';
+    dropZone.querySelector('.drop-title').textContent = 'ZIP 파일을 여기에 드래그 앤 드롭';
+    dropZone.querySelector('.drop-desc').textContent  = '.xlsx · .xlsm · .xls · .xlsb · .csv · .ods · .tsv 파일을 자동으로 탐지합니다';
+    toolbar.style.display    = 'none';
+    resultsEl.style.display  = 'none';
+    grid.innerHTML           = '';
+    searchEl.value           = '';
+    expandBtn.textContent    = '▼ 모두 펼치기';
+    fileInput.value          = '';
+  }
+  showProgress(false);
+}
+
+function setProgress(pct, label) {
+  progressFill.style.width = pct + '%';
+  progressLbl.textContent  = label;
+}
+
+function showProgress(on) {
+  progressWrap.style.display = on ? 'block' : 'none';
+}
+
+function extOf(name) {
+  const i = name.lastIndexOf('.');
+  return i < 0 ? '' : name.slice(i).toLowerCase();
+}
+
+function baseName(path) {
+  return path.split('/').pop();
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function hl(text, q) {
+  if (!q) return text;
+  const safe = escHtml(q);
+  return text.replace(new RegExp(`(${safe})`, 'gi'), '<mark style="background:rgba(99,102,241,.35);color:inherit;border-radius:2px;">$1</mark>');
+}
+
+const tick  = () => new Promise(r => setTimeout(r, 0));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+</script>
+</body>
+</html>
