@@ -260,7 +260,7 @@
   <div class="sep"></div>
 
   <button class="btn primary" id="analyzeBtn" disabled data-tip="선택한 열을 기준으로 번역 일치 여부를 분석합니다">분석</button>
-  <button class="btn success" id="downloadBtn" disabled data-tip="불일치 항목이 색상으로 표기된 HTML 파일을 내보냅니다">HTML 내보내기</button>
+  <button class="btn success" id="downloadBtn" disabled data-tip="불일치 셀 색칠 + 결과 열이 추가된 xlsx 파일로 내보냅니다">엑셀 내보내기</button>
 
   <div class="sep"></div>
 
@@ -318,6 +318,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 
@@ -326,7 +327,8 @@ let headers   = [];
 let dataRows  = [];    // array of arrays
 let analysisResult = null;   // Map<tgtColName, {issues, tgtColIdx}>
 let badSet    = null;   // Map<rowIdx, Set<colIdx>>  — 불일치 셀
-let firstSet  = null;   // Map<rowIdx, Set<colIdx>>  — 최초 번역 셀(불일치 이슈 있는 단어의 기준 행)
+let firstSet  = null;   // Map<rowIdx, Set<colIdx>>  — 최초 번역 셀
+let resultMap = null;   // Map<rowIdx, Map<tgtColIdx, [{src, firstTgt, currentTgt}]>> — 결과 열용
 let rowElems  = [];     // tr 요소 배열 (rowIdx → tr)
 
 // ── UTILS ──
@@ -371,7 +373,7 @@ function loadFile(file) {
 
       populateColumnSelectors();
       // Reset
-      analysisResult = null; badSet = null; firstSet = null; rowElems = [];
+      analysisResult = null; badSet = null; firstSet = null; resultMap = null; rowElems = [];
       $('panelMeta').textContent = '분석 전';
       $('panelBody').innerHTML = '<span class="empty-msg">열을 선택하고 분석 버튼을 누르세요.</span>';
       $('tableHead').innerHTML = ''; $('tableBody').innerHTML = '';
@@ -479,8 +481,9 @@ function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, mode) {
 }
 
 function buildIssueSets(analysisResult) {
-  const bad   = new Map();  // Map<rowIdx, Set<colIdx>>
-  const first = new Map();  // Map<rowIdx, Set<colIdx>>
+  const bad       = new Map();  // Map<rowIdx, Set<colIdx>>
+  const first     = new Map();  // Map<rowIdx, Set<colIdx>>
+  const rMap      = new Map();  // Map<rowIdx, Map<tgtColIdx, [{src, firstTgt, currentTgt}]>>
 
   for (const [, { issues, tgtColIdx }] of analysisResult) {
     for (const issue of issues) {
@@ -489,6 +492,11 @@ function buildIssueSets(analysisResult) {
           if (tgt !== issue.firstTgt) {
             if (!bad.has(rowIdx)) bad.set(rowIdx, new Set());
             bad.get(rowIdx).add(tgtColIdx);
+            // 결과 열용 상세 정보
+            if (!rMap.has(rowIdx)) rMap.set(rowIdx, new Map());
+            const colMap = rMap.get(rowIdx);
+            if (!colMap.has(tgtColIdx)) colMap.set(tgtColIdx, []);
+            colMap.get(tgtColIdx).push({ src: issue.src, firstTgt: issue.firstTgt, currentTgt: tgt });
           } else {
             if (!first.has(rowIdx)) first.set(rowIdx, new Set());
             first.get(rowIdx).add(tgtColIdx);
@@ -497,7 +505,7 @@ function buildIssueSets(analysisResult) {
       }
     }
   }
-  return { bad, first };
+  return { bad, first, rMap };
 }
 
 // ── ANALYZE ──
@@ -510,8 +518,9 @@ function doAnalyze() {
 
   analysisResult = analyzeConsistency(dataRows, headers, srcColIdx, tgtColIdxArr, getMode());
   const sets = buildIssueSets(analysisResult);
-  badSet   = sets.bad;
-  firstSet = sets.first;
+  badSet    = sets.bad;
+  firstSet  = sets.first;
+  resultMap = sets.rMap;
 
   let total = 0;
   for (const [, { issues }] of analysisResult) total += issues.length;
@@ -573,7 +582,7 @@ function renderTable(srcColIdx, tgtColIdxArr) {
     const td = document.createElement('td');
     td.colSpan = headers.length + 1;
     td.style.cssText = 'text-align:center;color:var(--muted);padding:10px;font-size:11px';
-    td.textContent = `표시 한도(${MAX.toLocaleString()}행)를 초과하여 일부만 표시합니다. HTML 내보내기에는 전체 데이터가 포함됩니다.`;
+    td.textContent = `표시 한도(${MAX.toLocaleString()}행)를 초과하여 일부만 표시합니다. 엑셀 내보내기에는 전체 데이터가 포함됩니다.`;
     tr.appendChild(td); tbody.appendChild(tr);
   }
 }
@@ -656,101 +665,106 @@ function renderPanel() {
   }
 }
 
-// ── HTML DOWNLOAD ──
-$('downloadBtn').addEventListener('click', downloadHTML);
+// ── EXCEL DOWNLOAD ──
+$('downloadBtn').addEventListener('click', downloadExcel);
 
-function downloadHTML() {
+async function downloadExcel() {
   if (!analysisResult || !dataRows.length) return;
-  const srcColIdx    = getSrcColIdx();
-  const tgtColIdxArr = getTgtColIdxArr();
-  const tgtSet       = new Set(tgtColIdxArr);
+  const btn = $('downloadBtn');
+  btn.disabled = true; btn.textContent = '생성 중...';
 
-  let totalIssues = 0;
-  let summaryHtml = '';
+  try {
+    const srcColIdx    = getSrcColIdx();
+    const tgtColIdxArr = getTgtColIdxArr();
+    const tgtSet       = new Set(tgtColIdxArr);
 
-  for (const [colName, { issues }] of analysisResult) {
-    if (!issues.length) continue;
-    totalIssues += issues.length;
-    summaryHtml += `<h3>비교 열: ${escHtml(colName)} — ${issues.length}개 불일치</h3>`;
-    summaryHtml += `<table class="sum"><thead><tr>
-      <th>원본</th><th>최초 번역 (기준)</th><th>불일치 번역</th><th>해당 행 (Excel 행 번호)</th>
-    </tr></thead><tbody>`;
-    for (const issue of issues) {
-      for (const [tgt, rowIdxArr] of issue.variants) {
-        if (tgt === issue.firstTgt) continue;
-        const rowNums = rowIdxArr.map(i => i + 2).join(', ');
-        summaryHtml += `<tr>
-          <td class="mono">${escHtml(issue.src)}</td>
-          <td class="c-first">${escHtml(issue.firstTgt || '(비어있음)')}</td>
-          <td class="c-bad">${escHtml(tgt || '(비어있음)')}</td>
-          <td>${escHtml(rowNums)}</td>
-        </tr>`;
+    // 비교 열별 결과 열 정의
+    const resultCols = [...analysisResult.entries()].map(([colName, { tgtColIdx }]) => ({
+      colName, tgtColIdx, header: `${colName}_검수결과`
+    }));
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('단어일치검수');
+
+    // ── 헤더 행 ──
+    const headerRow = ws.addRow([...headers, ...resultCols.map(rc => rc.header)]);
+    headerRow.height = 20;
+    headerRow.eachCell((cell, colNum) => {
+      const ci = colNum - 1;
+      if (ci === srcColIdx) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A5C' } };
+        cell.font = { bold: true, color: { argb: 'FF79C0FF' }, size: 11 };
+      } else if (ci < headers.length && tgtSet.has(ci)) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5C3A00' } };
+        cell.font = { bold: true, color: { argb: 'FFFFA657' }, size: 11 };
+      } else if (ci >= headers.length) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A3000' } };
+        cell.font = { bold: true, color: { argb: 'FFFFCC80' }, size: 11 };
+      } else {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
+        cell.font = { bold: true, color: { argb: 'FFE6EDF3' }, size: 11 };
       }
-    }
-    summaryHtml += '</tbody></table>';
+      cell.border  = { bottom: { style: 'medium', color: { argb: 'FF555555' } } };
+      cell.alignment = { vertical: 'middle' };
+    });
+
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+    // ── 데이터 행 ──
+    dataRows.forEach((row, rowIdx) => {
+      const resultVals = resultCols.map(rc => {
+        if (!resultMap.has(rowIdx) || !resultMap.get(rowIdx).has(rc.tgtColIdx)) return '';
+        const issues = resultMap.get(rowIdx).get(rc.tgtColIdx);
+        if (issues.length === 1) {
+          return `불일치 (최초: ${issues[0].firstTgt || '(비어있음)'})`;
+        }
+        return '불일치\n' + issues.map(is => `[${is.src}] 최초: ${is.firstTgt || '(비어있음)'}`).join('\n');
+      });
+
+      const excelRow = ws.addRow([...row, ...resultVals]);
+
+      excelRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        const ci = colNum - 1;
+        if (ci < headers.length) {
+          // 불일치 셀 → 주황 배경
+          if (badSet.has(rowIdx) && badSet.get(rowIdx).has(ci)) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
+            cell.font = { bold: true, color: { argb: 'FFC45300' } };
+          }
+        } else {
+          // 결과 열
+          const rcIdx = ci - headers.length;
+          const rc = resultCols[rcIdx];
+          if (rc && resultMap.has(rowIdx) && resultMap.get(rowIdx).has(rc.tgtColIdx)) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3E0' } };
+            cell.font = { color: { argb: 'FFB94000' } };
+            cell.alignment = { wrapText: true, vertical: 'top' };
+          }
+        }
+      });
+    });
+
+    // ── 열 너비 자동 조정 ──
+    ws.columns.forEach((col, ci) => {
+      if (ci >= headers.length) { col.width = 32; return; }
+      let maxLen = (headers[ci] || '').length + 2;
+      col.eachCell({ includeEmpty: false }, cell => {
+        const len = String(cell.value ?? '').length;
+        if (len > maxLen) maxLen = len;
+      });
+      col.width = Math.min(maxLen + 2, 42);
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = '단어일치검수_결과.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    btn.disabled = false; btn.textContent = '엑셀 내보내기';
   }
-
-  const thCells = ['<th class="th-rn">#</th>',
-    ...headers.map((h, i) => {
-      const c = i === srcColIdx ? ' class="th-src"' : tgtSet.has(i) ? ' class="th-tgt"' : '';
-      return `<th${c}>${escHtml(h)}</th>`;
-    })
-  ].join('');
-
-  const tbRows = dataRows.map((row, rowIdx) => {
-    const hasBad = badSet.has(rowIdx);
-    const cells = ['<td class="rn">' + (rowIdx + 2) + '</td>',
-      ...row.map((val, colIdx) => {
-        const s = escHtml(cellStr(val));
-        if      (badSet.has(rowIdx)   && badSet.get(rowIdx).has(colIdx))   return `<td class="c-bad">${s}</td>`;
-        else if (firstSet.has(rowIdx) && firstSet.get(rowIdx).has(colIdx)) return `<td class="c-first">${s}</td>`;
-        return `<td>${s}</td>`;
-      })
-    ].join('');
-    return `<tr${hasBad ? ' class="r-bad"' : ''}>${cells}</tr>`;
-  }).join('\n');
-
-  const html = `<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<title>단어 일치 검수 결과</title>
-<style>
-  body { font-family: "Noto Sans KR", system-ui, sans-serif; background:#fff; color:#1a1a1a; padding:20px 28px; }
-  h2 { font-size:18px; margin:0 0 12px; color:#111; }
-  h3 { font-size:13px; margin:18px 0 5px; color:#b94000; border-left:3px solid #ffa657; padding-left:8px; }
-  table { border-collapse:collapse; width:100%; margin-bottom:16px; font-size:12px; }
-  th { background:#2c3e50; color:#fff; padding:6px 10px; text-align:left; border:1px solid #1a252f; white-space:nowrap; }
-  td { padding:4px 10px; border:1px solid #dde; white-space:nowrap; max-width:360px; overflow:hidden; text-overflow:ellipsis; }
-  tr:nth-child(even) { background:#f7f8fa; }
-  .c-bad   { background:#ffe0b2 !important; color:#c45300; font-weight:700; }
-  .c-first { background:#e8f5e9 !important; color:#2e7d32; }
-  .r-bad   { background:#fff8f0 !important; }
-  .mono    { font-family:monospace; }
-  .th-rn   { width:36px; text-align:right; }
-  .th-src  { background:#1a3a5c !important; }
-  .th-tgt  { background:#5c3a00 !important; }
-  .rn      { color:#888; text-align:right; background:#f0f0f0; width:36px; }
-  .sum th  { background:#455a64; }
-  hr       { border:0; border-top:2px solid #dde; margin:24px 0; }
-</style>
-</head>
-<body>
-<h2>단어 일치 검수 결과</h2>
-<p style="color:#555;font-size:12px;margin-bottom:16px">총 불일치: <strong>${totalIssues}개</strong> &nbsp;|&nbsp; 전체 데이터: <strong>${dataRows.length}행</strong></p>
-<div>${summaryHtml}</div>
-<hr>
-<h2>전체 데이터</h2>
-<table><thead><tr>${thCells}</tr></thead><tbody>${tbRows}</tbody></table>
-</body>
-</html>`;
-
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = '단어일치검수_결과.html';
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ── MODE GROUP ──
