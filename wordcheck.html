@@ -16,17 +16,23 @@
       --accent: #58a6ff;
       --warn: #ffa657;
       --ok: #3fb950;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
-      background: var(--bg); color: var(--text);
-      font-size: 13px; line-height: 1.5;
-      display: flex; flex-direction: column;
+      --err: #ff7b72;
+      --violet: #c084fc;
     }
 
-    /* ── 드래그오버 오버레이 ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+    }
+
     .drop-overlay {
       position: fixed; inset: 0; z-index: 9999;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
@@ -39,7 +45,6 @@
     .drop-overlay-icon { font-size: 40px; }
     .drop-overlay-txt { font-size: 18px; font-weight: 800; color: var(--accent); }
 
-    /* ── NAV ── */
     .nav {
       flex-shrink: 0;
       position: sticky; top: 0; z-index: 200;
@@ -58,7 +63,6 @@
     .nav a:hover { color: var(--text); background: var(--surface2); }
     .nav a.active { color: var(--accent); border-color: rgba(88,166,255,0.35); background: rgba(88,166,255,0.1); }
 
-    /* ── TOOLBAR ── */
     .toolbar {
       flex-shrink: 0;
       display: flex; align-items: center; gap: 6px;
@@ -103,13 +107,12 @@
     .dot-w { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); display: inline-block; }
     .dot-m { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; }
 
-    /* Tooltip */
     [data-tip] { position: relative; }
     [data-tip]::after {
       content: attr(data-tip);
       position: absolute; bottom: calc(100% + 7px); left: 50%;
       transform: translateX(-50%);
-      max-width: 260px; white-space: normal; text-align: left;
+      max-width: 340px; white-space: normal; text-align: left;
       padding: 6px 9px; border-radius: 8px;
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(10,14,22,0.97);
@@ -120,7 +123,6 @@
     [data-tip]:hover::after { opacity: 1; }
     .toolbar [data-tip]::after { bottom: auto; top: calc(100% + 7px); }
 
-    /* ── SETUP ── */
     .setup {
       flex-shrink: 0;
       display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
@@ -131,6 +133,7 @@
     .setup.hidden { display: none; }
     .setup-item { display: flex; flex-direction: column; gap: 4px; }
     .setup-lbl { font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: .4px; }
+    .setup-note { font-size: 10px; color: var(--muted); }
 
     select {
       background: var(--surface2); color: var(--text);
@@ -141,11 +144,10 @@
     select:focus { outline: none; border-color: var(--accent); }
     select option { background: #161b22; }
 
-    /* ── 커스텀 멀티셀렉트 드롭다운 ── */
     .ms-wrap { position: relative; }
     .ms-btn {
       display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
-      min-width: 200px; padding: 5px 9px;
+      min-width: 240px; padding: 5px 9px;
       background: var(--surface2); color: var(--text);
       border: 1px solid var(--border2); border-radius: 8px;
       font-size: 12px; font-weight: 700; cursor: pointer; transition: .1s;
@@ -156,9 +158,10 @@
     .ms-btn .ms-arrow { font-size: 9px; color: var(--muted); transition: transform .15s; }
     .ms-btn.open .ms-arrow { transform: rotate(180deg); }
     .ms-btn .ms-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+
     .ms-panel {
       position: absolute; top: calc(100% + 4px); left: 0; z-index: 300;
-      min-width: 230px; max-height: 280px; overflow-y: auto;
+      min-width: 270px; max-height: 320px; overflow-y: auto;
       background: rgba(16,20,28,0.99); border: 1px solid var(--border2);
       border-radius: 10px; padding: 4px;
       box-shadow: 0 8px 28px rgba(0,0,0,0.55);
@@ -179,22 +182,29 @@
     }
     .ms-item:hover { background: var(--surface2); color: var(--text); }
     .ms-item.on { color: var(--warn); }
+    .ms-item.disabled {
+      opacity: .35;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
     .ms-check {
       width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
       border: 1px solid var(--border2);
       display: flex; align-items: center; justify-content: center;
       font-size: 9px; font-weight: 900;
     }
-    .ms-item.on .ms-check { background: rgba(255,166,87,0.25); border-color: rgba(255,166,87,0.6); color: var(--warn); }
+    .ms-item.on .ms-check {
+      background: rgba(255,166,87,0.25);
+      border-color: rgba(255,166,87,0.6);
+      color: var(--warn);
+    }
 
-    /* ── 분석 버튼 (setup 안에 있는 버전) ── */
     .btn.analyze {
       background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.4); color: #79c0ff;
       padding: 6px 18px; font-size: 13px;
     }
     .btn.analyze:hover { background: rgba(88,166,255,0.25); }
 
-    /* ── CONTENT (전체 너비 불일치 목록) ── */
     .content {
       flex: 1; overflow-y: auto;
       padding: 14px 16px 40px;
@@ -207,7 +217,6 @@
     }
     .content-empty .ci-icon { font-size: 36px; opacity: .4; }
 
-    /* 요약 바 */
     .summary-bar {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
       padding-bottom: 12px;
@@ -221,14 +230,14 @@
     }
     .s-chip.ok { border-color: rgba(63,185,80,0.3); background: rgba(63,185,80,0.08); color: #56d364; }
     .s-chip.info { border-color: rgba(88,166,255,0.3); background: rgba(88,166,255,0.08); color: var(--accent); }
+    .s-chip.violet { border-color: rgba(192,132,252,0.35); background: rgba(192,132,252,0.08); color: var(--violet); }
 
-    /* 불일치 카드 */
     .issue-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 12px; margin-bottom: 12px; overflow: hidden;
     }
     .icard-head {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
       padding: 9px 14px;
       background: rgba(255,166,87,0.06);
       border-bottom: 1px solid var(--border);
@@ -246,78 +255,92 @@
     }
     .icard-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
     .icard-table tbody tr:last-child { border-bottom: 0; }
-    .icard-table tbody tr.grp-first td { border-top: 1px solid rgba(255,255,255,0.06); }
-    .icard-table tbody tr.grp-first:first-child td { border-top: 0; }
     .icard-table td {
-      padding: 6px 14px; vertical-align: middle;
+      padding: 7px 14px; vertical-align: top;
+      word-break: break-word;
     }
+
+    .td-kind { width: 120px; }
+    .td-cat { width: 96px; color: #a5d6ff; font-weight: 700; }
+    .td-pri { width: 56px; color: var(--muted); font-weight: 700; }
     .td-src {
       font-family: ui-monospace, Consolas, monospace;
-      font-weight: 700; font-size: 12px; color: var(--text);
-      width: 200px; max-width: 240px;
-      border-right: 1px solid var(--border);
-      vertical-align: top; padding-top: 10px;
-      word-break: break-all;
+      font-weight: 700; color: var(--text);
+      width: 230px;
     }
     .td-first {
-      color: #56d364; font-weight: 600;
-      border-right: 1px solid var(--border);
-      vertical-align: top; padding-top: 10px;
-      width: 220px; max-width: 260px; word-break: break-all;
+      color: #56d364; font-weight: 700;
+      width: 220px;
     }
-    .td-bad { color: var(--warn); font-weight: 600; word-break: break-all; }
-    .td-rows {
-      font-size: 11px; color: var(--muted);
-      width: 140px; white-space: normal; word-break: break-all;
+    .td-bad { color: var(--warn); font-weight: 700; }
+    .td-note { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .td-rows { width: 170px; color: var(--muted); font-size: 11px; }
+
+    .badge-first,
+    .badge-bad,
+    .badge-kind {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 4px; margin-right: 4px;
     }
     .badge-first {
-      display: inline-flex; align-items: center;
-      font-size: 10px; font-weight: 700;
-      padding: 1px 6px; border-radius: 4px; margin-right: 4px;
-      background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.35); color: #56d364;
+      background: rgba(63,185,80,0.12);
+      border: 1px solid rgba(63,185,80,0.35);
+      color: #56d364;
     }
     .badge-bad {
-      display: inline-flex; align-items: center;
-      font-size: 10px; font-weight: 700;
-      padding: 1px 6px; border-radius: 4px; margin-right: 4px;
-      background: rgba(255,166,87,0.12); border: 1px solid rgba(255,166,87,0.4); color: var(--warn);
+      background: rgba(255,166,87,0.12);
+      border: 1px solid rgba(255,166,87,0.4);
+      color: var(--warn);
+    }
+    .badge-kind.full {
+      background: rgba(88,166,255,0.12);
+      border: 1px solid rgba(88,166,255,0.35);
+      color: #79c0ff;
+    }
+    .badge-kind.base {
+      background: rgba(192,132,252,0.12);
+      border: 1px solid rgba(192,132,252,0.35);
+      color: var(--violet);
+    }
+    .badge-kind.sentence {
+      background: rgba(255,123,114,0.12);
+      border: 1px solid rgba(255,123,114,0.35);
+      color: #ff9b95;
     }
   </style>
 </head>
 <body>
 
-<!-- 드래그오버 오버레이 -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-overlay-icon">📂</div>
-  <div class="drop-overlay-txt">xlsx 파일을 여기에 놓으세요</div>
+  <div class="drop-overlay-txt">xlsx / xls 파일을 여기에 놓으세요</div>
 </div>
 
-<!-- NAV -->
 <nav class="nav">
   <span class="nav-brand">TOOLS</span>
-  <a href="review.html"      data-page="review.html">번역 검수</a>
-  <a href="strscan.html"     data-page="strscan.html">문자열 탐지</a>
+  <a href="review.html" data-page="review.html">번역 검수</a>
+  <a href="strscan.html" data-page="strscan.html">문자열 탐지</a>
   <a href="placeholder.html" data-page="placeholder.html">플레이스홀더</a>
-  <a href="wordcheck.html"   data-page="wordcheck.html">단어 일치 검수</a>
+  <a href="wordcheck.html" data-page="wordcheck.html">단어 일치 검수</a>
 </nav>
 
-<!-- TOOLBAR -->
 <div class="toolbar">
   <label class="btn upload-label" id="uploadLabel" data-tip="클릭하거나 파일을 드래그해서 업로드">
     엑셀 업로드
     <input type="file" id="fileInput" accept=".xlsx,.xls">
   </label>
-  <span id="fileNameBadge" style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <span id="fileNameBadge" style="font-size:11px;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
 
   <div class="sep"></div>
 
-  <span style="font-size:11px;font-weight:800;color:var(--muted)">비교 방식</span>
+  <span style="font-size:11px;font-weight:800;color:var(--muted)">검사 방식</span>
   <div class="mode-group">
-    <label data-tip="셀 내용 전체를 하나의 단위로 비교합니다">
-      <input type="radio" name="mode" value="cell" checked> 셀 전체
+    <label data-tip="분류 + 우선순위를 반영합니다. P1/P2는 전체 원문 기준 검수, P2 중심으로 대표어(base) 검수, P3는 문장 내 기준 용어 포함 여부를 검사합니다.">
+      <input type="radio" name="mode" value="auto" checked> 자동 검수
     </label>
-    <label data-tip="소스·타겟 모두 단어 단위로 분리하여 위치 기반으로 매핑합니다">
-      <input type="radio" name="mode" value="word"> 개별 단어
+    <label data-tip="우선순위/분류 특수 처리를 하지 않고 같은 기준값의 전체 셀 번역만 비교합니다.">
+      <input type="radio" name="mode" value="cell"> 단순 셀 전체
     </label>
   </div>
 
@@ -331,14 +354,26 @@
   <button class="btn success" id="downloadBtn" disabled data-tip="불일치 셀 색칠 + 결과 열이 추가된 xlsx 파일로 내보냅니다">엑셀 내보내기</button>
 </div>
 
-<!-- SETUP (파일 업로드 후 표시) -->
 <div class="setup hidden" id="setupArea">
   <div class="setup-item">
     <span class="setup-lbl">① 원본 열 (기준)</span>
     <select id="srcColSelect"></select>
   </div>
+
   <div class="setup-item">
-    <span class="setup-lbl">② 비교 열 (번역 결과, 복수 선택)</span>
+    <span class="setup-lbl">② 우선순위 열</span>
+    <select id="priorityColSelect"></select>
+    <span class="setup-note">예: 우선순위</span>
+  </div>
+
+  <div class="setup-item">
+    <span class="setup-lbl">③ 분류 열</span>
+    <select id="categoryColSelect"></select>
+    <span class="setup-note">예: 분류</span>
+  </div>
+
+  <div class="setup-item">
+    <span class="setup-lbl">④ 비교 열 (번역 결과, 복수 선택)</span>
     <div class="ms-wrap" id="msWrap">
       <button class="ms-btn" id="msBtn" type="button">
         <span class="ms-label" id="msBtnLabel">열을 선택하세요</span>
@@ -353,13 +388,13 @@
       </div>
     </div>
   </div>
+
   <div class="setup-item" style="padding-bottom:1px">
     <span class="setup-lbl" style="visibility:hidden">분석</span>
-    <button class="btn analyze" id="analyzeBtn" disabled>③ 분석</button>
+    <button class="btn analyze" id="analyzeBtn" disabled>⑤ 분석</button>
   </div>
 </div>
 
-<!-- CONTENT (전체 너비 불일치 목록) -->
 <div class="content" id="content">
   <div class="content-empty" id="emptyState">
     <div class="ci-icon">📋</div>
@@ -373,44 +408,804 @@
 <script>
 const $ = id => document.getElementById(id);
 
-// ── STATE ──
-let headers   = [];
-let dataRows  = [];
-let analysisResult = null;
-let badSet    = null;
-let firstSet  = null;
-let resultMap = null;
+let headers = [];
+let dataRows = [];
+let analysisResult = null; // Map<tgtColName, { issues, tgtColIdx, summary }>
+let badSet = null;         // Map<rowIdx, Set<tgtColIdx>>
+let resultMap = null;      // Map<rowIdx, Map<tgtColIdx, string[]>>
+let msAllState = false;
 
-// ── UTILS ──
+const PRIORITY_HEADER_HINTS = [/^우선순위$/i, /^priority$/i, /우선순위/i, /priority/i];
+const CATEGORY_HEADER_HINTS = [/^분류$/i, /^category$/i, /^type$/i, /분류/i, /category/i, /type/i];
+const ISSUE_TYPE_ORDER = { base: 0, full: 1, sentence: 2 };
+
 function escHtml(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return String(s ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
-function cellStr(v) { return String(v ?? '').trim(); }
 
-// ── DRAG AND DROP ──
+function cellStr(v) {
+  return String(v ?? '').trim();
+}
+
+function safeLocale(a, b) {
+  return String(a ?? '').localeCompare(String(b ?? ''), 'ko');
+}
+
+function uniq(arr) {
+  return [...new Set(arr)];
+}
+
+function detectHeaderIndex(hints) {
+  for (let i = 0; i < headers.length; i++) {
+    const h = cellStr(headers[i]);
+    if (hints.some(re => re.test(h))) return i;
+  }
+  return -1;
+}
+
+function parsePriorityCell(v) {
+  const s = String(v ?? '').trim();
+  if (/^1$/.test(s)) return 1;
+  if (/^2$/.test(s)) return 2;
+  if (/^3$/.test(s)) return 3;
+  return null;
+}
+
+function normalizeCategoryValue(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  return s || '__all__';
+}
+
+function formatCategory(cat) {
+  return cat && cat !== '__all__' ? cat : '미분류';
+}
+
+function normalizeComparableText(s) {
+  let t = String(s ?? '').normalize('NFKC').trim();
+  if (!t) return '';
+  t = t
+    .replace(/\u00A0/g, ' ')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[（]/g, '(').replace(/[）]/g, ')')
+    .replace(/[［]/g, '[').replace(/[］]/g, ']')
+    .replace(/[｛]/g, '{').replace(/[｝]/g, '}')
+    .replace(/[‐-‒–—―]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (/[A-Za-z]/.test(t)) t = t.toLowerCase();
+  return t;
+}
+
+function normalizeContainText(s) {
+  return normalizeComparableText(s).replace(/\s+/g, '');
+}
+
+function normalizeSourceKey(s) {
+  return normalizeComparableText(s);
+}
+
+function stripTrailingBracketInfoDisplay(s) {
+  let t = cellStr(s);
+  if (!t) return '';
+  let prev = null;
+  while (t && t !== prev) {
+    prev = t;
+    t = t.replace(/\s*[\(\[\{（［｛][^()\[\]{}（）［］｛｝]{0,80}[\)\]\}）］｝]\s*$/u, '').trim();
+  }
+  return t;
+}
+
+function extractBaseInfo(sourceText) {
+  const raw = cellStr(sourceText);
+  if (!raw) {
+    return {
+      fullText: '',
+      fullNorm: '',
+      baseText: '',
+      baseNorm: '',
+      variantText: '',
+      hasVariant: false,
+      sourceContainKey: ''
+    };
+  }
+
+  const m = raw.match(/^(.*?)(?:\s*[\(\[\{（［｛]\s*(.*?)\s*[\)\]\}）］｝])?\s*$/u);
+  let baseText = raw;
+  let variantText = '';
+
+  if (m) {
+    baseText = cellStr(m[1]) || raw;
+    variantText = cellStr(m[2]);
+  }
+
+  return {
+    fullText: raw,
+    fullNorm: normalizeSourceKey(raw),
+    baseText,
+    baseNorm: normalizeSourceKey(baseText),
+    variantText,
+    hasVariant: !!variantText,
+    sourceContainKey: normalizeContainText(raw)
+  };
+}
+
+function buildFamilyKey(normText) {
+  const t = normalizeComparableText(normText);
+  if (!t) return '__EMPTY__';
+
+  if (/[A-Za-z]/.test(t) && /\s/.test(t)) {
+    const tokens = t.split(/\s+/).filter(Boolean).slice(0, 2);
+    return tokens.join(' ');
+  }
+
+  const compact = t.replace(/\s+/g, '');
+  if (!compact) return '__EMPTY__';
+  return compact.slice(0, Math.min(4, compact.length));
+}
+
+function parseTargetCell(v) {
+  const rawText = cellStr(v);
+  const fullNorm = normalizeComparableText(rawText);
+  const strippedDisplay = stripTrailingBracketInfoDisplay(rawText) || rawText;
+  const strippedNorm = normalizeComparableText(strippedDisplay);
+  const containNorm = normalizeContainText(rawText);
+  const familyKey = buildFamilyKey(strippedNorm || fullNorm);
+
+  return {
+    rawText,
+    fullNorm,
+    strippedDisplay,
+    strippedNorm,
+    containNorm,
+    familyKey
+  };
+}
+
+function containsComparable(sentenceNorm, termNorm) {
+  if (!sentenceNorm || !termNorm) return false;
+
+  if (/[a-z]/i.test(termNorm)) {
+    const s = ` ${sentenceNorm} `;
+    const t = ` ${termNorm} `;
+    return s.includes(t);
+  }
+  return sentenceNorm.includes(termNorm);
+}
+
+function addRowMessage(rowMap, rowIdx, message) {
+  if (!rowMap.has(rowIdx)) rowMap.set(rowIdx, []);
+  rowMap.get(rowIdx).push(message);
+}
+
+function mergeColRowMessages(globalRowMap, colRowMessages, tgtColIdx) {
+  for (const [rowIdx, msgs] of colRowMessages) {
+    if (!globalRowMap.has(rowIdx)) globalRowMap.set(rowIdx, new Map());
+    if (!globalRowMap.get(rowIdx).has(tgtColIdx)) globalRowMap.get(rowIdx).set(tgtColIdx, []);
+    globalRowMap.get(rowIdx).get(tgtColIdx).push(...msgs);
+  }
+}
+
+function mergeBadRows(globalBad, rowIdxSet, tgtColIdx) {
+  for (const rowIdx of rowIdxSet) {
+    if (!globalBad.has(rowIdx)) globalBad.set(rowIdx, new Set());
+    globalBad.get(rowIdx).add(tgtColIdx);
+  }
+}
+
+function pickDominantFromCounter(counterMap) {
+  const arr = [...counterMap.entries()].map(([key, obj]) => ({ key, ...obj }));
+  arr.sort((a, b) =>
+    (b.count - a.count) ||
+    (a.firstOrder - b.firstOrder) ||
+    safeLocale(a.display, b.display)
+  );
+  return arr;
+}
+
+function longestCommonPrefix(arr) {
+  if (!arr.length) return '';
+  let prefix = arr[0] || '';
+  for (let i = 1; i < arr.length; i++) {
+    const cur = arr[i] || '';
+    while (prefix && !cur.startsWith(prefix)) {
+      prefix = prefix.slice(0, -1);
+    }
+    if (!prefix) break;
+  }
+  return prefix;
+}
+
+function cleanupPrefix(prefix, referenceList) {
+  let p = String(prefix || '').trim();
+  if (!p) return '';
+
+  p = p.replace(/[\s\-–—_:|/\\,.;·•]+$/u, '').trim();
+  p = p.replace(/[\(\[\{]+$/u, '').trim();
+
+  if (!p) return '';
+
+  if (/[A-Za-z]/.test(p)) {
+    const exact = referenceList.some(v => v === p);
+    if (!exact && !/[ \-–—_:|/\\]$/.test(prefix)) {
+      p = p.replace(/\S+$/u, '').trim();
+    }
+  }
+
+  return p.trim();
+}
+
+function isUsefulBasePrefix(prefix) {
+  const p = String(prefix || '').trim();
+  if (!p) return false;
+  const compact = p.replace(/\s+/g, '');
+  if (/[A-Za-z]/.test(p)) {
+    if (p.includes(' ')) return compact.length >= 4;
+    return compact.length >= 6;
+  }
+  return compact.length >= 2;
+}
+
+function formatRowsExcel(rowIdxArr) {
+  const nums = rowIdxArr.slice(0, 12).map(i => i + 2).join(', ');
+  return nums + (rowIdxArr.length > 12 ? ` 외 ${rowIdxArr.length - 12}건` : '');
+}
+
+function getMode() {
+  return document.querySelector('input[name="mode"]:checked')?.value ?? 'auto';
+}
+
+function getOptionalColIdx(selectId) {
+  const v = $(selectId).value;
+  return v === '' ? -1 : parseInt(v, 10);
+}
+
+function getSrcColIdx() {
+  return parseInt($('srcColSelect').value, 10);
+}
+
+function getExcludedColIdxSet() {
+  const set = new Set();
+  const srcIdx = getSrcColIdx();
+  const priIdx = getOptionalColIdx('priorityColSelect');
+  const catIdx = getOptionalColIdx('categoryColSelect');
+  if (srcIdx >= 0) set.add(srcIdx);
+  if (priIdx >= 0) set.add(priIdx);
+  if (catIdx >= 0) set.add(catIdx);
+  return set;
+}
+
+function getTgtColIdxArr() {
+  const excluded = getExcludedColIdxSet();
+  return [...$('msItems').querySelectorAll('.ms-item.on')]
+    .map(el => parseInt(el.dataset.idx, 10))
+    .filter(idx => !excluded.has(idx));
+}
+
+function prepareRows(rows, srcColIdx, priorityColIdx, categoryColIdx, tgtColIdxArr) {
+  return rows.map((row, rowIdx) => {
+    const sourceInfo = extractBaseInfo(row[srcColIdx]);
+    const priority = priorityColIdx >= 0 ? (parsePriorityCell(row[priorityColIdx]) || 1) : 1;
+    const category = categoryColIdx >= 0 ? normalizeCategoryValue(row[categoryColIdx]) : '__all__';
+
+    const targetMap = new Map();
+    for (const tgtColIdx of tgtColIdxArr) {
+      targetMap.set(tgtColIdx, parseTargetCell(row[tgtColIdx]));
+    }
+
+    return {
+      rowIdx,
+      excelRow: rowIdx + 2,
+      rawRow: row,
+      category,
+      priority,
+      sourceText: sourceInfo.fullText,
+      sourceNorm: sourceInfo.fullNorm,
+      sourceContainKey: sourceInfo.sourceContainKey,
+      baseText: sourceInfo.baseText,
+      baseNorm: sourceInfo.baseNorm,
+      variantText: sourceInfo.variantText,
+      hasVariant: sourceInfo.hasVariant,
+      targets: targetMap
+    };
+  });
+}
+
+function buildStaticGroups(preparedRows) {
+  const fullGroups = new Map();
+  const baseGroups = new Map();
+
+  for (const row of preparedRows) {
+    if (!row.sourceText) continue;
+
+    const fullKey = `${row.category}||${row.priority}||${row.sourceNorm}`;
+    if (!fullGroups.has(fullKey)) {
+      fullGroups.set(fullKey, {
+        key: fullKey,
+        category: row.category,
+        priority: row.priority,
+        sourceText: row.sourceText,
+        sourceNorm: row.sourceNorm,
+        baseText: row.baseText,
+        rows: []
+      });
+    }
+    fullGroups.get(fullKey).rows.push(row.rowIdx);
+
+    if (row.baseNorm) {
+      const baseKey = `${row.category}||${row.priority}||${row.baseNorm}`;
+      if (!baseGroups.has(baseKey)) {
+        baseGroups.set(baseKey, {
+          key: baseKey,
+          category: row.category,
+          priority: row.priority,
+          baseText: row.baseText,
+          baseNorm: row.baseNorm,
+          rows: [],
+          fullSet: new Set(),
+          hasVariant: false
+        });
+      }
+      const group = baseGroups.get(baseKey);
+      group.rows.push(row.rowIdx);
+      group.fullSet.add(row.sourceNorm);
+      if (row.hasVariant) group.hasVariant = true;
+    }
+  }
+
+  return { fullGroups, baseGroups };
+}
+
+function analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, includePriority3, rowMessages, badRows) {
+  const issues = [];
+
+  for (const group of fullGroups.values()) {
+    if (!includePriority3 && group.priority === 3) continue;
+    if (group.rows.length < 2) continue;
+
+    const counter = new Map();
+    for (const rowIdx of group.rows) {
+      const t = preparedRows[rowIdx].targets.get(tgtColIdx);
+      const key = t.fullNorm || '__EMPTY__';
+      if (!counter.has(key)) {
+        counter.set(key, {
+          count: 0,
+          firstOrder: rowIdx,
+          display: t.rawText || '(비어있음)',
+          rows: []
+        });
+      }
+      const entry = counter.get(key);
+      entry.count++;
+      entry.rows.push(rowIdx);
+    }
+
+    if (counter.size <= 1) continue;
+
+    const ranked = pickDominantFromCounter(counter);
+    const dominant = ranked[0];
+    const second = ranked[1];
+    const tie = !!second && second.count === dominant.count;
+
+    for (let i = 1; i < ranked.length; i++) {
+      const bad = ranked[i];
+      issues.push({
+        type: 'full',
+        typeLabel: '전체 원문',
+        category: group.category,
+        priority: group.priority,
+        basisText: group.sourceText,
+        representativeText: dominant.display,
+        problemText: bad.display,
+        note: tie ? '동률 발생 · 대표 번역은 최초 행 우선' : '',
+        rows: [...bad.rows]
+      });
+
+      for (const rowIdx of bad.rows) {
+        badRows.add(rowIdx);
+        addRowMessage(
+          rowMessages,
+          rowIdx,
+          `전체원문 불일치 [${formatCategory(group.category)}/P${group.priority}/${group.sourceText}] 대표: ${dominant.display} | 현재: ${bad.display}`
+        );
+      }
+    }
+  }
+
+  return issues;
+}
+
+function analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColumn, rowMessages, badRows) {
+  const issues = [];
+
+  for (const group of baseGroups.values()) {
+    const shouldRun = hasPriorityColumn ? group.priority === 2 : true;
+    if (!shouldRun) continue;
+    if (group.rows.length < 2) continue;
+    if (group.fullSet.size < 2 && !group.hasVariant) continue;
+
+    const items = group.rows.map(rowIdx => ({
+      rowIdx,
+      row: preparedRows[rowIdx],
+      t: preparedRows[rowIdx].targets.get(tgtColIdx)
+    }));
+
+    const validItems = items.filter(item => item.t.rawText);
+    if (validItems.length < 2) continue;
+
+    const familyCounter = new Map();
+    for (const item of validItems) {
+      const key = item.t.familyKey || '__EMPTY__';
+      if (!familyCounter.has(key)) {
+        familyCounter.set(key, {
+          count: 0,
+          firstOrder: item.rowIdx,
+          display: item.t.strippedDisplay || item.t.rawText || '(비어있음)',
+          rows: []
+        });
+      }
+      const entry = familyCounter.get(key);
+      entry.count++;
+      entry.rows.push(item.rowIdx);
+    }
+
+    const rankedFamily = pickDominantFromCounter(familyCounter);
+    if (!rankedFamily.length) continue;
+
+    const dominantFamily = rankedFamily[0];
+    const secondFamily = rankedFamily[1];
+
+    if (dominantFamily.key === '__EMPTY__') continue;
+    if (dominantFamily.count < 2) continue;
+    if (secondFamily && dominantFamily.count <= secondFamily.count) continue;
+
+    const dominantItems = validItems.filter(item => item.t.familyKey === dominantFamily.key);
+    let dominantBaseNorm = '';
+    const candidateNorms = dominantItems
+      .map(item => item.t.strippedNorm || item.t.fullNorm)
+      .filter(Boolean);
+
+    if (candidateNorms.length) {
+      dominantBaseNorm = cleanupPrefix(longestCommonPrefix(candidateNorms), candidateNorms);
+      if (!isUsefulBasePrefix(dominantBaseNorm)) {
+        const tempCounter = new Map();
+        for (const value of candidateNorms) {
+          if (!tempCounter.has(value)) tempCounter.set(value, { count: 0, firstOrder: 999999, display: value });
+          tempCounter.get(value).count++;
+        }
+        const picked = [...tempCounter.entries()]
+          .map(([key, obj]) => ({ key, ...obj }))
+          .sort((a, b) => (b.count - a.count) || safeLocale(a.key, b.key))[0];
+        dominantBaseNorm = picked ? picked.key : '';
+      }
+    }
+
+    if (!dominantBaseNorm) {
+      dominantBaseNorm = dominantFamily.display || '';
+    }
+
+    const representativeText = dominantBaseNorm || dominantFamily.display || '(비어있음)';
+    const bucketMap = new Map();
+
+    for (const item of items) {
+      const normToCheck = item.t.strippedNorm || item.t.fullNorm;
+      const followsRepresentative = normToCheck && representativeText && normToCheck.startsWith(representativeText);
+      const sameFamily = item.t.familyKey === dominantFamily.key;
+      const isEmpty = !item.t.rawText;
+
+      let isIssue = false;
+      if (isEmpty) {
+        isIssue = true;
+      } else if (!(sameFamily && followsRepresentative)) {
+        isIssue = true;
+      }
+
+      if (!isIssue) continue;
+
+      const problemKey = item.t.fullNorm || '__EMPTY__';
+      const display = item.t.strippedDisplay || item.t.rawText || '(비어있음)';
+      if (!bucketMap.has(problemKey)) {
+        bucketMap.set(problemKey, {
+          display,
+          rows: []
+        });
+      }
+      bucketMap.get(problemKey).rows.push(item.rowIdx);
+    }
+
+    if (!bucketMap.size) continue;
+
+    for (const [, bucket] of bucketMap) {
+      issues.push({
+        type: 'base',
+        typeLabel: '대표어(base)',
+        category: group.category,
+        priority: group.priority,
+        basisText: group.baseText,
+        representativeText,
+        problemText: bucket.display,
+        note: `대표 ${dominantFamily.count}/${validItems.length}행 · 파생 원문 ${group.fullSet.size}종`,
+        rows: [...bucket.rows]
+      });
+
+      for (const rowIdx of bucket.rows) {
+        badRows.add(rowIdx);
+        addRowMessage(
+          rowMessages,
+          rowIdx,
+          `대표어(base) 불일치 [${formatCategory(group.category)}/P${group.priority}/base=${group.baseText}] 대표 베이스: ${representativeText} | 현재: ${bucket.display}`
+        );
+      }
+    }
+  }
+
+  return issues;
+}
+
+function buildGlossary(preparedRows, fullGroups, tgtColIdx) {
+  const glossaryByCategory = new Map();
+
+  for (const group of fullGroups.values()) {
+    if (group.priority !== 1 && group.priority !== 2) continue;
+    const sourceContainKey = normalizeContainText(group.sourceText);
+    if (!sourceContainKey || sourceContainKey.length < 2) continue;
+
+    const counter = new Map();
+    for (const rowIdx of group.rows) {
+      const t = preparedRows[rowIdx].targets.get(tgtColIdx);
+      const key = t.fullNorm || '__EMPTY__';
+      if (!counter.has(key)) {
+        counter.set(key, {
+          count: 0,
+          firstOrder: rowIdx,
+          display: t.rawText || '(비어있음)',
+          norm: t.fullNorm || '',
+          rows: []
+        });
+      }
+      const entry = counter.get(key);
+      entry.count++;
+      entry.rows.push(rowIdx);
+    }
+
+    const ranked = pickDominantFromCounter(counter);
+    if (!ranked.length) continue;
+    const dominant = ranked[0];
+    if (!dominant.norm) continue;
+
+    if (!glossaryByCategory.has(group.category)) glossaryByCategory.set(group.category, []);
+    glossaryByCategory.get(group.category).push({
+      category: group.category,
+      priority: group.priority,
+      sourceText: group.sourceText,
+      sourceContainKey,
+      targetDisplay: dominant.display,
+      targetNorm: dominant.norm,
+      variants: ranked.map(v => ({
+        display: v.display,
+        norm: counter.get(v.key)?.norm || v.key
+      }))
+    });
+  }
+
+  for (const list of glossaryByCategory.values()) {
+    list.sort((a, b) =>
+      (b.sourceContainKey.length - a.sourceContainKey.length) ||
+      safeLocale(a.sourceText, b.sourceText)
+    );
+  }
+
+  return glossaryByCategory;
+}
+
+function analyzeSentenceRows(preparedRows, glossaryByCategory, tgtColIdx, rowMessages, badRows) {
+  const issues = [];
+
+  for (const row of preparedRows) {
+    if (row.priority !== 3) continue;
+    if (!row.sourceText) continue;
+
+    const glossary = glossaryByCategory.get(row.category) || [];
+    if (!glossary.length) continue;
+
+    const matches = [];
+    for (const term of glossary) {
+      if (row.sourceContainKey.includes(term.sourceContainKey)) {
+        matches.push(term);
+      }
+    }
+    if (!matches.length) continue;
+
+    matches.sort((a, b) =>
+      (b.sourceContainKey.length - a.sourceContainKey.length) ||
+      safeLocale(a.sourceText, b.sourceText)
+    );
+
+    const selected = [];
+    for (const match of matches) {
+      if (selected.some(sel => sel.sourceContainKey.includes(match.sourceContainKey))) continue;
+      selected.push(match);
+    }
+
+    const t = row.targets.get(tgtColIdx);
+    const sentenceNorm = t.fullNorm || '';
+
+    for (const term of selected) {
+      if (containsComparable(sentenceNorm, term.targetNorm)) continue;
+
+      let foundVariant = null;
+      for (const variant of term.variants) {
+        if (!variant.norm || variant.norm === term.targetNorm) continue;
+        if (containsComparable(sentenceNorm, variant.norm)) {
+          foundVariant = variant;
+          break;
+        }
+      }
+
+      issues.push({
+        type: 'sentence',
+        typeLabel: '문장(P3)',
+        category: row.category,
+        priority: 3,
+        basisText: term.sourceText,
+        representativeText: term.targetDisplay,
+        problemText: foundVariant ? foundVariant.display : '(미포함)',
+        note: foundVariant ? '문장 내 다른 변형 사용' : '문장 내 기준 용어 미포함',
+        rows: [row.rowIdx]
+      });
+
+      badRows.add(row.rowIdx);
+
+      if (foundVariant) {
+        addRowMessage(
+          rowMessages,
+          row.rowIdx,
+          `문장 내 다른 변형 [${formatCategory(row.category)}/P3/${term.sourceText}] 기준: ${term.targetDisplay} | 발견: ${foundVariant.display}`
+        );
+      } else {
+        addRowMessage(
+          rowMessages,
+          row.rowIdx,
+          `문장 내 용어 미포함 [${formatCategory(row.category)}/P3/${term.sourceText}] 기준: ${term.targetDisplay}`
+        );
+      }
+    }
+  }
+
+  return issues;
+}
+
+function analyzeColumnAuto(preparedRows, fullGroups, baseGroups, tgtColIdx, hasPriorityColumn) {
+  const rowMessages = new Map();
+  const badRows = new Set();
+
+  const fullIssues = analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, false, rowMessages, badRows);
+  const baseIssues = analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColumn, rowMessages, badRows);
+
+  let sentenceIssues = [];
+  if (hasPriorityColumn) {
+    const glossaryByCategory = buildGlossary(preparedRows, fullGroups, tgtColIdx);
+    sentenceIssues = analyzeSentenceRows(preparedRows, glossaryByCategory, tgtColIdx, rowMessages, badRows);
+  }
+
+  const issues = [...baseIssues, ...fullIssues, ...sentenceIssues];
+  issues.sort((a, b) =>
+    (ISSUE_TYPE_ORDER[a.type] - ISSUE_TYPE_ORDER[b.type]) ||
+    safeLocale(formatCategory(a.category), formatCategory(b.category)) ||
+    (a.priority - b.priority) ||
+    safeLocale(a.basisText, b.basisText) ||
+    safeLocale(a.problemText, b.problemText)
+  );
+
+  return {
+    issues,
+    rowMessages,
+    badRows,
+    summary: {
+      full: fullIssues.length,
+      base: baseIssues.length,
+      sentence: sentenceIssues.length
+    }
+  };
+}
+
+function analyzeColumnCell(preparedRows, fullGroups, tgtColIdx) {
+  const rowMessages = new Map();
+  const badRows = new Set();
+  const fullIssues = analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, true, rowMessages, badRows);
+
+  const issues = [...fullIssues];
+  issues.sort((a, b) =>
+    safeLocale(formatCategory(a.category), formatCategory(b.category)) ||
+    (a.priority - b.priority) ||
+    safeLocale(a.basisText, b.basisText) ||
+    safeLocale(a.problemText, b.problemText)
+  );
+
+  return {
+    issues,
+    rowMessages,
+    badRows,
+    summary: {
+      full: fullIssues.length,
+      base: 0,
+      sentence: 0
+    }
+  };
+}
+
+function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, priorityColIdx, categoryColIdx, mode) {
+  const preparedRows = prepareRows(rows, srcColIdx, priorityColIdx, categoryColIdx, tgtColIdxArr);
+  const { fullGroups, baseGroups } = buildStaticGroups(preparedRows);
+
+  const result = new Map();
+  const globalBad = new Map();
+  const globalRowMap = new Map();
+  const hasPriorityColumn = priorityColIdx >= 0;
+
+  for (const tgtColIdx of tgtColIdxArr) {
+    const tgtColName = headers[tgtColIdx];
+    const colResult = mode === 'auto'
+      ? analyzeColumnAuto(preparedRows, fullGroups, baseGroups, tgtColIdx, hasPriorityColumn)
+      : analyzeColumnCell(preparedRows, fullGroups, tgtColIdx);
+
+    result.set(tgtColName, {
+      issues: colResult.issues,
+      tgtColIdx,
+      summary: colResult.summary
+    });
+
+    mergeBadRows(globalBad, colResult.badRows, tgtColIdx);
+    mergeColRowMessages(globalRowMap, colResult.rowMessages, tgtColIdx);
+  }
+
+  for (const [, colMap] of globalRowMap) {
+    for (const [tgtColIdx, msgs] of colMap) {
+      colMap.set(tgtColIdx, uniq(msgs));
+    }
+  }
+
+  return {
+    result,
+    bad: globalBad,
+    rowMap: globalRowMap
+  };
+}
+
 let dragCounter = 0;
+
 document.addEventListener('dragenter', e => {
   e.preventDefault();
   dragCounter++;
   $('dropOverlay').classList.add('active');
 });
-document.addEventListener('dragleave', () => {
+
+document.addEventListener('dragleave', e => {
+  e.preventDefault();
   dragCounter--;
-  if (dragCounter <= 0) { dragCounter = 0; $('dropOverlay').classList.remove('active'); }
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    $('dropOverlay').classList.remove('active');
+  }
 });
+
 document.addEventListener('dragover', e => e.preventDefault());
+
 document.addEventListener('drop', e => {
   e.preventDefault();
   dragCounter = 0;
   $('dropOverlay').classList.remove('active');
-  const file = e.dataTransfer?.files[0];
+  const file = e.dataTransfer?.files?.[0];
   if (file && /\.(xlsx|xls)$/i.test(file.name)) loadFile(file);
 });
 
-// ── FILE UPLOAD ──
 $('fileInput').addEventListener('change', e => {
-  const file = e.target.files[0];
+  const file = e.target.files?.[0];
   if (!file) return;
   e.target.value = '';
   loadFile(file);
@@ -423,9 +1218,13 @@ function loadFile(file) {
       const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      if (!raw.length) { alert('데이터가 없습니다.'); return; }
 
-      const maxCols = Math.max(...raw.map(r => r.length));
+      if (!raw.length) {
+        alert('데이터가 없습니다.');
+        return;
+      }
+
+      const maxCols = Math.max(...raw.map(r => r.length), 0);
       headers = raw[0].map((h, i) => cellStr(h) || `열${i + 1}`);
       while (headers.length < maxCols) headers.push(`열${headers.length + 1}`);
 
@@ -443,29 +1242,58 @@ function loadFile(file) {
 
       populateColumnSelectors();
 
-      // 상태 리셋
-      analysisResult = null; badSet = null; firstSet = null; resultMap = null;
+      analysisResult = null;
+      badSet = null;
+      resultMap = null;
+
       $('statIssue').textContent = '불일치 0';
       $('downloadBtn').disabled = true;
       $('emptyState').style.display = '';
       $('issueArea').style.display = 'none';
       $('issueArea').innerHTML = '';
-    } catch(err) {
+    } catch (err) {
       alert('파일을 읽지 못했습니다: ' + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
 }
 
-// ── COLUMN SELECTORS ──
 function populateColumnSelectors() {
+  const priDetected = detectHeaderIndex(PRIORITY_HEADER_HINTS);
+  const catDetected = detectHeaderIndex(CATEGORY_HEADER_HINTS);
+
+  let defaultSrc = headers.findIndex((_, i) => i !== priDetected && i !== catDetected);
+  if (defaultSrc < 0) defaultSrc = 0;
+
   const srcSel = $('srcColSelect');
   srcSel.innerHTML = '';
   headers.forEach((h, i) => {
     const opt = document.createElement('option');
-    opt.value = i; opt.textContent = h;
+    opt.value = i;
+    opt.textContent = h;
     srcSel.appendChild(opt);
   });
+  srcSel.value = String(defaultSrc);
+
+  const priSel = $('priorityColSelect');
+  priSel.innerHTML = '<option value="">사용 안 함</option>';
+  headers.forEach((h, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = h;
+    priSel.appendChild(opt);
+  });
+  if (priDetected >= 0) priSel.value = String(priDetected);
+
+  const catSel = $('categoryColSelect');
+  catSel.innerHTML = '<option value="">사용 안 함</option>';
+  headers.forEach((h, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = h;
+    catSel.appendChild(opt);
+  });
+  if (catDetected >= 0) catSel.value = String(catDetected);
 
   const msItems = $('msItems');
   msItems.innerHTML = '';
@@ -475,20 +1303,40 @@ function populateColumnSelectors() {
     item.dataset.idx = i;
     item.innerHTML = `<span class="ms-check"></span><span class="ms-name">${escHtml(h)}</span>`;
     item.addEventListener('click', () => {
+      if (item.classList.contains('disabled')) return;
       item.classList.toggle('on');
-      const chk = item.querySelector('.ms-check');
-      chk.textContent = item.classList.contains('on') ? '✓' : '';
+      item.querySelector('.ms-check').textContent = item.classList.contains('on') ? '✓' : '';
+      syncMsAllState();
       updateMsBtnLabel();
     });
     msItems.appendChild(item);
   });
+
+  msAllState = false;
+  $('msAllBtn').textContent = '전체 선택';
+  refreshMsDisabledStates();
   updateMsBtnLabel();
 }
 
-// 멀티셀렉트 버튼 텍스트 업데이트
+function refreshMsDisabledStates() {
+  const excluded = getExcludedColIdxSet();
+  $('msItems').querySelectorAll('.ms-item').forEach(item => {
+    const idx = parseInt(item.dataset.idx, 10);
+    const disabled = excluded.has(idx);
+    item.classList.toggle('disabled', disabled);
+    if (disabled) {
+      item.classList.remove('on');
+      item.querySelector('.ms-check').textContent = '';
+    }
+  });
+  syncMsAllState();
+  updateMsBtnLabel();
+}
+
 function updateMsBtnLabel() {
   const selected = [...$('msItems').querySelectorAll('.ms-item.on')];
   const label = $('msBtnLabel');
+
   if (!selected.length) {
     label.textContent = '열을 선택하세요';
     $('msBtn').style.color = 'var(--muted)';
@@ -501,14 +1349,23 @@ function updateMsBtnLabel() {
   }
 }
 
-// 드롭다운 토글
+function syncMsAllState() {
+  const items = [...$('msItems').querySelectorAll('.ms-item:not(.disabled)')];
+  const onItems = items.filter(item => item.classList.contains('on'));
+  msAllState = items.length > 0 && onItems.length === items.length;
+  $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
+}
+
+$('srcColSelect').addEventListener('change', refreshMsDisabledStates);
+$('priorityColSelect').addEventListener('change', refreshMsDisabledStates);
+$('categoryColSelect').addEventListener('change', refreshMsDisabledStates);
+
 $('msBtn').addEventListener('click', e => {
   e.stopPropagation();
-  const panel = $('msPanel');
-  const btn   = $('msBtn');
-  const open  = panel.classList.toggle('open');
-  btn.classList.toggle('open', open);
+  const open = $('msPanel').classList.toggle('open');
+  $('msBtn').classList.toggle('open', open);
 });
+
 document.addEventListener('click', e => {
   if (!$('msWrap').contains(e.target)) {
     $('msPanel').classList.remove('open');
@@ -516,144 +1373,61 @@ document.addEventListener('click', e => {
   }
 });
 
-// 전체 선택/해제
-let msAllState = false;
 $('msAllBtn').addEventListener('click', () => {
   msAllState = !msAllState;
   $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
+
   $('msItems').querySelectorAll('.ms-item').forEach(item => {
-    const chk = item.querySelector('.ms-check');
-    if (msAllState) { item.classList.add('on'); chk.textContent = '✓'; }
-    else            { item.classList.remove('on'); chk.textContent = ''; }
+    if (item.classList.contains('disabled')) return;
+    if (msAllState) {
+      item.classList.add('on');
+      item.querySelector('.ms-check').textContent = '✓';
+    } else {
+      item.classList.remove('on');
+      item.querySelector('.ms-check').textContent = '';
+    }
   });
+
   updateMsBtnLabel();
 });
 
-function getMode()        { return document.querySelector('input[name="mode"]:checked')?.value ?? 'cell'; }
-function getSrcColIdx()   { return parseInt($('srcColSelect').value, 10); }
-function getTgtColIdxArr(){
-  return [...$('msItems').querySelectorAll('.ms-item.on')].map(el => parseInt(el.dataset.idx, 10));
-}
-
-// ── SPLIT HELPER ──
-const SPLIT_RE = /[\s\t\r\n,，、;；·\-\/]+/;
-function splitWords(s) {
-  return s.split(SPLIT_RE)
-    .map(w => w.replace(/^['"()\[\]{}<>«»]+|['"()\[\]{}<>«»]+$/g, '').trim())
-    .filter(w => w.length >= 1);
-}
-
-// ── ANALYSIS ──
-function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, mode) {
-  const result = new Map();
-
-  for (const tgtColIdx of tgtColIdxArr) {
-    const tgtColName = headers[tgtColIdx];
-    const tracker = new Map(); // srcKey → { firstTgt, firstRow, variants: Map<tgt, rowIdx[]> }
-
-    rows.forEach((row, rowIdx) => {
-      const srcCell = cellStr(row[srcColIdx]);
-      const tgtCell = cellStr(row[tgtColIdx]);
-      if (!srcCell) return;
-
-      let pairs; // [{srcKey, tgtKey}]
-
-      if (mode === 'word') {
-        // 소스·타겟 모두 단어 분리 → 위치 기반 매핑
-        const srcWords = splitWords(srcCell);
-        const tgtWords = splitWords(tgtCell);
-
-        if (!srcWords.length) {
-          pairs = [{ srcKey: srcCell, tgtKey: tgtCell }];
-        } else {
-          pairs = srcWords.map((sw, i) => ({
-            srcKey: sw,
-            // 대응하는 타겟 단어가 있으면 그것만 사용, 없으면 전체 셀 폴백
-            tgtKey: i < tgtWords.length ? tgtWords[i] : tgtCell
-          }));
-        }
-      } else {
-        pairs = [{ srcKey: srcCell, tgtKey: tgtCell }];
-      }
-
-      for (const { srcKey, tgtKey } of pairs) {
-        if (!tracker.has(srcKey)) {
-          tracker.set(srcKey, {
-            firstTgt: tgtKey,
-            firstRow: rowIdx,
-            variants: new Map([[tgtKey, [rowIdx]]])
-          });
-        } else {
-          const entry = tracker.get(srcKey);
-          if (!entry.variants.has(tgtKey)) entry.variants.set(tgtKey, []);
-          entry.variants.get(tgtKey).push(rowIdx);
-        }
-      }
-    });
-
-    const issues = [];
-    for (const [src, data] of tracker) {
-      if (data.variants.size > 1) {
-        issues.push({ src, firstTgt: data.firstTgt, firstRow: data.firstRow, variants: data.variants });
-      }
-    }
-    issues.sort((a, b) => String(a.src).localeCompare(String(b.src), 'ko'));
-    result.set(tgtColName, { issues, tgtColIdx });
-  }
-  return result;
-}
-
-function buildIssueSets(analysisResult) {
-  const bad   = new Map();
-  const first = new Map();
-  const rMap  = new Map(); // rowIdx → Map<tgtColIdx, [{src, firstTgt, currentTgt}]>
-
-  for (const [, { issues, tgtColIdx }] of analysisResult) {
-    for (const issue of issues) {
-      for (const [tgt, rowIdxArr] of issue.variants) {
-        for (const rowIdx of rowIdxArr) {
-          if (tgt !== issue.firstTgt) {
-            if (!bad.has(rowIdx)) bad.set(rowIdx, new Set());
-            bad.get(rowIdx).add(tgtColIdx);
-            if (!rMap.has(rowIdx)) rMap.set(rowIdx, new Map());
-            const colMap = rMap.get(rowIdx);
-            if (!colMap.has(tgtColIdx)) colMap.set(tgtColIdx, []);
-            colMap.get(tgtColIdx).push({ src: issue.src, firstTgt: issue.firstTgt, currentTgt: tgt });
-          } else {
-            if (!first.has(rowIdx)) first.set(rowIdx, new Set());
-            first.get(rowIdx).add(tgtColIdx);
-          }
-        }
-      }
-    }
-  }
-  return { bad, first, rMap };
-}
-
-// ── ANALYZE ──
 $('analyzeBtn').addEventListener('click', doAnalyze);
 
 function doAnalyze() {
-  const srcColIdx    = getSrcColIdx();
+  const srcColIdx = getSrcColIdx();
+  const priorityColIdx = getOptionalColIdx('priorityColSelect');
+  const categoryColIdx = getOptionalColIdx('categoryColSelect');
   const tgtColIdxArr = getTgtColIdxArr();
-  if (!tgtColIdxArr.length) { alert('비교 열을 하나 이상 선택해 주세요.'); return; }
 
-  analysisResult = analyzeConsistency(dataRows, headers, srcColIdx, tgtColIdxArr, getMode());
-  const sets = buildIssueSets(analysisResult);
-  badSet    = sets.bad;
-  firstSet  = sets.first;
-  resultMap = sets.rMap;
+  if (!tgtColIdxArr.length) {
+    alert('비교 열을 하나 이상 선택해 주세요.');
+    return;
+  }
+
+  const mode = getMode();
+  const analyzed = analyzeConsistency(
+    dataRows,
+    headers,
+    srcColIdx,
+    tgtColIdxArr,
+    priorityColIdx,
+    categoryColIdx,
+    mode
+  );
+
+  analysisResult = analyzed.result;
+  badSet = analyzed.bad;
+  resultMap = analyzed.rowMap;
 
   let total = 0;
   for (const [, { issues }] of analysisResult) total += issues.length;
   $('statIssue').textContent = `불일치 ${total}`;
 
-  renderIssues(srcColIdx, tgtColIdxArr);
+  renderIssues(tgtColIdxArr);
   $('downloadBtn').disabled = false;
 }
 
-// ── RENDER ISSUES ──
-function renderIssues(srcColIdx, tgtColIdxArr) {
+function renderIssues(tgtColIdxArr) {
   const area = $('issueArea');
   area.innerHTML = '';
   $('emptyState').style.display = 'none';
@@ -661,144 +1435,207 @@ function renderIssues(srcColIdx, tgtColIdxArr) {
 
   let totalIssues = 0;
   let okCols = 0;
-  for (const [, { issues }] of analysisResult) {
-    if (issues.length) totalIssues += issues.length;
-    else okCols++;
+  let totalBaseIssues = 0;
+
+  for (const [, { issues, summary }] of analysisResult) {
+    totalIssues += issues.length;
+    totalBaseIssues += summary.base;
+    if (!issues.length) okCols++;
   }
 
-  // 요약 바
+  const badRowCount = badSet ? badSet.size : 0;
+
+  const frag = document.createDocumentFragment();
+
   const bar = document.createElement('div');
   bar.className = 'summary-bar';
-  if (totalIssues) {
-    const c1 = document.createElement('span');
-    c1.className = 's-chip';
-    c1.textContent = `불일치 ${totalIssues}건`;
-    bar.appendChild(c1);
-  }
-  if (okCols) {
-    const c2 = document.createElement('span');
-    c2.className = 's-chip ok';
-    c2.textContent = `이상 없는 열 ${okCols}개`;
-    bar.appendChild(c2);
-  }
+
+  const c1 = document.createElement('span');
+  c1.className = 's-chip';
+  c1.textContent = `불일치 ${totalIssues}건`;
+  bar.appendChild(c1);
+
+  const c2 = document.createElement('span');
+  c2.className = 's-chip violet';
+  c2.textContent = `base 검수 ${totalBaseIssues}건`;
+  bar.appendChild(c2);
+
   const c3 = document.createElement('span');
   c3.className = 's-chip info';
-  c3.textContent = `전체 ${dataRows.length}행 · ${tgtColIdxArr.length}개 비교 열`;
+  c3.textContent = `문제 행 ${badRowCount}개`;
   bar.appendChild(c3);
-  area.appendChild(bar);
 
-  // 카드 렌더
-  for (const [colName, { issues }] of analysisResult) {
+  if (okCols) {
+    const c4 = document.createElement('span');
+    c4.className = 's-chip ok';
+    c4.textContent = `이상 없는 열 ${okCols}개`;
+    bar.appendChild(c4);
+  }
+
+  const c5 = document.createElement('span');
+  c5.className = 's-chip info';
+  c5.textContent = `전체 ${dataRows.length}행 · ${tgtColIdxArr.length}개 비교 열`;
+  bar.appendChild(c5);
+
+  frag.appendChild(bar);
+
+  for (const [colName, { issues, summary }] of analysisResult) {
     const card = document.createElement('div');
     card.className = 'issue-card';
 
-    // 카드 헤더
     const head = document.createElement('div');
     head.className = 'icard-head';
+
     if (issues.length) {
-      head.innerHTML = `<span class="icard-colname">${escHtml(colName)}</span>`
-        + `<span class="icard-count">${issues.length}개 불일치</span>`;
+      head.innerHTML = `
+        <span class="icard-colname">${escHtml(colName)}</span>
+        <span class="icard-count">총 ${issues.length}건</span>
+        <span class="icard-count">전체 원문 ${summary.full}건</span>
+        <span class="icard-count">대표어(base) ${summary.base}건</span>
+        <span class="icard-count">문장(P3) ${summary.sentence}건</span>
+      `;
     } else {
-      head.innerHTML = `<span class="icard-colname">${escHtml(colName)}</span>`
-        + `<span class="icard-ok">✓ 이상 없음</span>`;
+      head.innerHTML = `
+        <span class="icard-colname">${escHtml(colName)}</span>
+        <span class="icard-ok">✓ 이상 없음</span>
+      `;
     }
     card.appendChild(head);
 
-    if (!issues.length) { area.appendChild(card); continue; }
+    if (issues.length) {
+      const table = document.createElement('table');
+      table.className = 'icard-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>종류</th>
+            <th>분류</th>
+            <th>P</th>
+            <th>기준어 / base</th>
+            <th>대표 번역</th>
+            <th>문제 값 / 상태</th>
+            <th>행 번호 (Excel)</th>
+          </tr>
+        </thead>
+      `;
 
-    // 테이블
-    const table = document.createElement('table');
-    table.className = 'icard-table';
-    table.innerHTML = `<thead><tr>
-      <th>원본 (기준 단어)</th>
-      <th>최초 번역</th>
-      <th>불일치 번역</th>
-      <th>행 번호 (Excel)</th>
-    </tr></thead>`;
-    const tbody = document.createElement('tbody');
+      const tbody = document.createElement('tbody');
 
-    for (const issue of issues) {
-      // 불일치 번역만 수집 (firstTgt 제외)
-      const diffs = [...issue.variants.entries()].filter(([tgt]) => tgt !== issue.firstTgt);
-      const rowCount = diffs.length;
-
-      diffs.forEach(([tgt, rowIdxArr], di) => {
+      for (const issue of issues) {
         const tr = document.createElement('tr');
-        if (di === 0) tr.className = 'grp-first';
 
-        // 원본 셀 (rowspan)
-        if (di === 0) {
-          const tdSrc = document.createElement('td');
-          tdSrc.className = 'td-src';
-          tdSrc.rowSpan = rowCount;
-          tdSrc.textContent = issue.src;
-          tr.appendChild(tdSrc);
+        const tdKind = document.createElement('td');
+        tdKind.className = 'td-kind';
+        const kindBadge = document.createElement('span');
+        kindBadge.className = 'badge-kind ' + (
+          issue.type === 'base' ? 'base' :
+          issue.type === 'sentence' ? 'sentence' : 'full'
+        );
+        kindBadge.textContent = issue.typeLabel;
+        tdKind.appendChild(kindBadge);
+        tr.appendChild(tdKind);
 
-          // 최초 번역 셀 (rowspan)
-          const tdFirst = document.createElement('td');
-          tdFirst.className = 'td-first';
-          tdFirst.rowSpan = rowCount;
-          const bFirst = document.createElement('span');
-          bFirst.className = 'badge-first'; bFirst.textContent = '최초';
-          tdFirst.appendChild(bFirst);
-          tdFirst.appendChild(document.createTextNode(issue.firstTgt || '(비어있음)'));
-          tr.appendChild(tdFirst);
-        }
+        const tdCat = document.createElement('td');
+        tdCat.className = 'td-cat';
+        tdCat.textContent = formatCategory(issue.category);
+        tr.appendChild(tdCat);
 
-        // 불일치 번역
+        const tdPri = document.createElement('td');
+        tdPri.className = 'td-pri';
+        tdPri.textContent = `P${issue.priority}`;
+        tr.appendChild(tdPri);
+
+        const tdSrc = document.createElement('td');
+        tdSrc.className = 'td-src';
+        tdSrc.textContent = issue.basisText;
+        tr.appendChild(tdSrc);
+
+        const tdFirst = document.createElement('td');
+        tdFirst.className = 'td-first';
+        const firstBadge = document.createElement('span');
+        firstBadge.className = 'badge-first';
+        firstBadge.textContent = '대표';
+        tdFirst.appendChild(firstBadge);
+        tdFirst.appendChild(document.createTextNode(issue.representativeText || '(비어있음)'));
+        tr.appendChild(tdFirst);
+
         const tdBad = document.createElement('td');
         tdBad.className = 'td-bad';
-        const bBad = document.createElement('span');
-        bBad.className = 'badge-bad'; bBad.textContent = '불일치';
-        tdBad.appendChild(bBad);
-        tdBad.appendChild(document.createTextNode(tgt || '(비어있음)'));
+        const badBadge = document.createElement('span');
+        badBadge.className = 'badge-bad';
+        badBadge.textContent = issue.type === 'sentence' ? '상태' : '문제';
+        tdBad.appendChild(badBadge);
+        tdBad.appendChild(document.createTextNode(issue.problemText || '(비어있음)'));
+        if (issue.note) {
+          const noteDiv = document.createElement('div');
+          noteDiv.className = 'td-note';
+          noteDiv.textContent = issue.note;
+          tdBad.appendChild(noteDiv);
+        }
         tr.appendChild(tdBad);
 
-        // 행 번호
         const tdRows = document.createElement('td');
         tdRows.className = 'td-rows';
-        const nums = rowIdxArr.slice(0, 10).map(i => i + 2).join(', ');
-        tdRows.textContent = nums + (rowIdxArr.length > 10 ? ` 외 ${rowIdxArr.length - 10}건` : '');
+        tdRows.textContent = formatRowsExcel(issue.rows);
         tr.appendChild(tdRows);
 
         tbody.appendChild(tr);
-      });
+      }
+
+      table.appendChild(tbody);
+      card.appendChild(table);
     }
 
-    table.appendChild(tbody);
-    card.appendChild(table);
-    area.appendChild(card);
+    frag.appendChild(card);
   }
+
+  area.appendChild(frag);
 }
 
-// ── EXCEL DOWNLOAD ──
 $('downloadBtn').addEventListener('click', downloadExcel);
 
 async function downloadExcel() {
   if (!analysisResult || !dataRows.length) return;
+
   const btn = $('downloadBtn');
-  btn.disabled = true; btn.textContent = '생성 중...';
+  btn.disabled = true;
+  btn.textContent = '생성 중...';
 
   try {
-    const srcColIdx    = getSrcColIdx();
+    const srcColIdx = getSrcColIdx();
+    const priorityColIdx = getOptionalColIdx('priorityColSelect');
+    const categoryColIdx = getOptionalColIdx('categoryColSelect');
     const tgtColIdxArr = getTgtColIdxArr();
-    const tgtSet       = new Set(tgtColIdxArr);
+    const tgtSet = new Set(tgtColIdxArr);
+
+    const metaSet = new Set([srcColIdx]);
+    if (priorityColIdx >= 0) metaSet.add(priorityColIdx);
+    if (categoryColIdx >= 0) metaSet.add(categoryColIdx);
 
     const resultCols = [...analysisResult.entries()].map(([colName, { tgtColIdx }]) => ({
-      colName, tgtColIdx, header: `${colName}_검수결과`
+      colName,
+      tgtColIdx,
+      header: `${colName}_검수결과`
     }));
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('단어일치검수');
 
-    // 헤더 행
     const headerRow = ws.addRow([...headers, ...resultCols.map(rc => rc.header)]);
     headerRow.height = 20;
+
     headerRow.eachCell((cell, colNum) => {
       const ci = colNum - 1;
+
       if (ci === srcColIdx) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A5C' } };
         cell.font = { bold: true, color: { argb: 'FF79C0FF' }, size: 11 };
+      } else if (priorityColIdx >= 0 && ci === priorityColIdx) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3C2A5C' } };
+        cell.font = { bold: true, color: { argb: 'FFC8A2FF' }, size: 11 };
+      } else if (categoryColIdx >= 0 && ci === categoryColIdx) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF204A4F' } };
+        cell.font = { bold: true, color: { argb: 'FF8DEBFF' }, size: 11 };
       } else if (ci < headers.length && tgtSet.has(ci)) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5C3A00' } };
         cell.font = { bold: true, color: { argb: 'FFFFA657' }, size: 11 };
@@ -809,36 +1646,34 @@ async function downloadExcel() {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
         cell.font = { bold: true, color: { argb: 'FFE6EDF3' }, size: 11 };
       }
-      cell.border  = { bottom: { style: 'medium', color: { argb: 'FF555555' } } };
+
+      cell.border = { bottom: { style: 'medium', color: { argb: 'FF555555' } } };
       cell.alignment = { vertical: 'middle' };
     });
 
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
-    // 데이터 행
     dataRows.forEach((row, rowIdx) => {
       const resultVals = resultCols.map(rc => {
-        if (!resultMap.has(rowIdx) || !resultMap.get(rowIdx).has(rc.tgtColIdx)) return '';
-        const issues = resultMap.get(rowIdx).get(rc.tgtColIdx);
-        if (issues.length === 1) {
-          return `불일치 (최초: ${issues[0].firstTgt || '(비어있음)'})`;
-        }
-        return '불일치\n' + issues.map(is => `[${is.src}] 최초: ${is.firstTgt || '(비어있음)'}`).join('\n');
+        const msgs = resultMap?.get(rowIdx)?.get(rc.tgtColIdx) || [];
+        return msgs.length ? uniq(msgs).join('\n') : '';
       });
 
       const excelRow = ws.addRow([...row, ...resultVals]);
 
       excelRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
         const ci = colNum - 1;
+
         if (ci < headers.length) {
-          if (badSet.has(rowIdx) && badSet.get(rowIdx).has(ci)) {
+          if (badSet?.has(rowIdx) && badSet.get(rowIdx).has(ci)) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
             cell.font = { bold: true, color: { argb: 'FFC45300' } };
           }
+          cell.alignment = { vertical: 'middle' };
         } else {
           const rcIdx = ci - headers.length;
           const rc = resultCols[rcIdx];
-          if (rc && resultMap.has(rowIdx) && resultMap.get(rowIdx).has(rc.tgtColIdx)) {
+          if (rc && resultMap?.has(rowIdx) && resultMap.get(rowIdx).has(rc.tgtColIdx)) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3E0' } };
             cell.font = { color: { argb: 'FFB94000' } };
             cell.alignment = { wrapText: true, vertical: 'top' };
@@ -847,41 +1682,50 @@ async function downloadExcel() {
       });
     });
 
-    // 열 너비
     ws.columns.forEach((col, ci) => {
-      if (ci >= headers.length) { col.width = 32; return; }
+      if (ci >= headers.length) {
+        col.width = 52;
+        return;
+      }
+
       let maxLen = (headers[ci] || '').length + 2;
       col.eachCell({ includeEmpty: false }, cell => {
         const len = String(cell.value ?? '').length;
         if (len > maxLen) maxLen = len;
       });
-      col.width = Math.min(maxLen + 2, 42);
+      col.width = Math.min(maxLen + 2, 40);
     });
 
     const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = '단어일치검수_결과.xlsx';
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '단어일치검수_결과.xlsx';
     a.click();
     URL.revokeObjectURL(url);
   } finally {
-    btn.disabled = false; btn.textContent = '엑셀 내보내기';
+    btn.disabled = false;
+    btn.textContent = '엑셀 내보내기';
   }
 }
 
-// ── MODE GROUP ──
 document.querySelectorAll('.mode-group label').forEach(label => {
   label.addEventListener('click', () => {
     document.querySelectorAll('.mode-group label').forEach(l => l.classList.remove('active'));
     label.classList.add('active');
-    const r = label.querySelector('input'); if (r) r.checked = true;
+    const r = label.querySelector('input');
+    if (r) r.checked = true;
   });
 });
-const initActive = document.querySelector('.mode-group label:has(input:checked)');
-if (initActive) initActive.classList.add('active');
+const checkedMode = document.querySelector('.mode-group input:checked');
+if (checkedMode && checkedMode.closest('label')) {
+  checkedMode.closest('label').classList.add('active');
+}
 
-// ── NAV ACTIVE ──
 const curPage = (location.pathname.split('/').pop() || '').toLowerCase();
 document.querySelectorAll('.nav a[data-page]').forEach(a => {
   if ((a.dataset.page || '').toLowerCase() === curPage) a.classList.add('active');
