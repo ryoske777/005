@@ -573,9 +573,16 @@ function buildFamilyKey(normText) {
   const t = normalizeComparableText(normText);
   if (!t) return '__EMPTY__';
 
-  if (/[A-Za-z]/.test(t) && /\s/.test(t)) {
-    const tokens = t.split(/\s+/).filter(Boolean).slice(0, 2);
-    return tokens.join(' ');
+  if (/\s/.test(t)) {
+    if (/[A-Za-z]/.test(t)) {
+      // 라틴 포함 + 공백: 첫 2 토큰으로 그룹화
+      const tokens = t.split(/\s+/).filter(Boolean).slice(0, 2);
+      return tokens.join(' ');
+    } else {
+      // CJK 등 비라틴 + 공백: 첫 단어(공백 이전)를 family key로 사용
+      // 예) "坚固的 瓦东" → "坚固的", "坚固的 小恶魔" → "坚固的" (같은 패밀리)
+      return t.split(/\s+/)[0] || t;
+    }
   }
 
   const compact = t.replace(/\s+/g, '');
