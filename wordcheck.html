@@ -309,6 +309,51 @@
       border: 1px solid rgba(255,123,114,0.35);
       color: #ff9b95;
     }
+    .badge-kind.cross {
+      background: rgba(255,80,80,0.12);
+      border: 1px solid rgba(255,80,80,0.35);
+      color: #ff6b6b;
+    }
+
+    .s-chip.cross {
+      border-color: rgba(255,80,80,0.3);
+      background: rgba(255,80,80,0.08);
+      color: #ff6b6b;
+    }
+
+    mark.diff-word {
+      background: rgba(255,166,87,0.22);
+      border-radius: 3px;
+      padding: 0 2px;
+      color: #ffc57a;
+      font-style: normal;
+    }
+
+    .filter-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      padding: 6px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.01);
+    }
+    .filter-btn {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 6px;
+      border: 1px solid var(--border2); background: transparent;
+      color: var(--muted); font-size: 11px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: .1s; user-select: none;
+    }
+    .filter-btn:hover { background: var(--surface2); color: var(--text); }
+    .filter-btn.f-active { background: rgba(88,166,255,0.12); border-color: rgba(88,166,255,0.4); color: #79c0ff; }
+    .filter-btn[data-ftype="crossPriority"].f-active { background: rgba(255,80,80,0.12); border-color: rgba(255,80,80,0.35); color: #ff6b6b; }
+    .filter-btn[data-ftype="base"].f-active { background: rgba(192,132,252,0.12); border-color: rgba(192,132,252,0.35); color: var(--violet); }
+    .filter-btn[data-ftype="full"].f-active { background: rgba(88,166,255,0.12); border-color: rgba(88,166,255,0.4); color: #79c0ff; }
+    .filter-btn[data-ftype="sentence"].f-active { background: rgba(255,123,114,0.12); border-color: rgba(255,123,114,0.35); color: #ff9b95; }
+
+    .icard-head { cursor: pointer; }
+    .icard-toggle { font-size: 9px; color: var(--muted); margin-left: auto; transition: transform .2s; flex-shrink: 0; }
+    .icard-head.collapsed .icard-toggle { transform: rotate(180deg); }
+    .icard-body.collapsed { display: none; }
 
     /* Loading overlay */
     #loadingOverlay {
@@ -414,6 +459,23 @@
   <button class="btn success" id="downloadBtn" disabled data-tip="불일치 셀 색칠 + 결과 열이 추가된 xlsx 파일로 내보냅니다">엑셀 내보내기</button>
 </div>
 
+<div class="filter-bar" id="filterBar" style="display:none">
+  <span style="font-size:11px;font-weight:800;color:var(--muted)">종류</span>
+  <button class="filter-btn f-active" data-ftype="all">전체</button>
+  <button class="filter-btn" data-ftype="crossPriority">P1 미반영</button>
+  <button class="filter-btn" data-ftype="base">대표어(base)</button>
+  <button class="filter-btn" data-ftype="full">전체 원문</button>
+  <button class="filter-btn" data-ftype="sentence">P3 문장</button>
+  <div class="sep"></div>
+  <span style="font-size:11px;font-weight:800;color:var(--muted)">우선순위</span>
+  <button class="filter-btn f-active" data-fpri="all">전체</button>
+  <button class="filter-btn" data-fpri="1">P1</button>
+  <button class="filter-btn" data-fpri="2">P2</button>
+  <button class="filter-btn" data-fpri="3">P3</button>
+  <div class="sep"></div>
+  <span id="filteredCount" style="font-size:11px;color:var(--muted)"></span>
+</div>
+
 <div class="setup hidden" id="setupArea">
   <div class="setup-item" id="sheetSetupItem" style="display:none">
     <span class="setup-lbl">시트</span>
@@ -470,7 +532,7 @@ let resultMap = null;      // Map<rowIdx, Map<tgtColIdx, string[]>>
 
 const PRIORITY_HEADER_HINTS = [/^우선순위$/, /^priority$/i, /우선순위/];
 const CATEGORY_HEADER_HINTS = [/^분류$/, /^category$/i, /^match_type$/i, /분류/];
-const ISSUE_TYPE_ORDER = { base: 0, full: 1, sentence: 2 };
+const ISSUE_TYPE_ORDER = { crossPriority: 0, base: 1, full: 2, sentence: 3 };
 
 function escHtml(s) {
   return String(s ?? '')
@@ -657,6 +719,29 @@ function containsComparable(sentenceNorm, termNorm) {
     }
   }
   return sentenceNorm.includes(termNorm);
+}
+
+function termContainedIn(termNorm, containerNorm) {
+  if (!termNorm || !containerNorm) return false;
+  if (/[a-z]/i.test(termNorm)) {
+    const cSet = new Set(containerNorm.split(/\s+/).filter(Boolean));
+    return termNorm.split(/\s+/).filter(Boolean).every(t => cSet.has(t));
+  }
+  const termC = termNorm.replace(/\s+/g, '');
+  const contC = containerNorm.replace(/\s+/g, '');
+  return termC.length > 0 && contC.includes(termC);
+}
+
+function diffWordsHtml(referenceStr, problemStr) {
+  if (!problemStr) return '<em style="color:var(--muted)">(비어있음)</em>';
+  if (!referenceStr) return escHtml(problemStr);
+  const refSet = new Set(referenceStr.toLowerCase().split(/\s+/).filter(Boolean));
+  return problemStr.split(/(\s+)/).map(part => {
+    if (!part.trim()) return escHtml(part);
+    return refSet.has(part.toLowerCase())
+      ? escHtml(part)
+      : `<mark class="diff-word">${escHtml(part)}</mark>`;
+  }).join('');
 }
 
 function addRowMessage(rowMap, rowIdx, message) {
@@ -1031,6 +1116,85 @@ function analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColum
   return issues;
 }
 
+function analyzeCrossPriorityCheck(preparedRows, fullGroups, tgtColIdx, rowMessages, badRows) {
+  const issues = [];
+  const p1DomCache = new Map();
+
+  for (const row of preparedRows) {
+    if (row.priority !== 2) continue;
+    if (!row.baseNorm) continue;
+
+    const p1Key = `${row.category}||1||${row.baseNorm}`;
+
+    let p1Dom;
+    if (p1DomCache.has(p1Key)) {
+      p1Dom = p1DomCache.get(p1Key);
+    } else {
+      const p1Group = fullGroups.get(p1Key);
+      if (!p1Group) {
+        p1DomCache.set(p1Key, null);
+        continue;
+      }
+
+      const counter = new Map();
+      for (const rowIdx of p1Group.rows) {
+        const t = preparedRows[rowIdx]?.targets.get(tgtColIdx);
+        const key = t?.fullNorm || '__EMPTY__';
+        if (!counter.has(key)) {
+          counter.set(key, { count: 0, firstOrder: rowIdx, display: t?.rawText || '', norm: t?.fullNorm || '' });
+        }
+        counter.get(key).count++;
+      }
+
+      const ranked = pickDominantFromCounter(counter);
+      if (!ranked.length || !ranked[0].norm) {
+        p1DomCache.set(p1Key, null);
+        continue;
+      }
+
+      p1Dom = {
+        display: ranked[0].display,
+        norm: ranked[0].norm,
+        sourceText: p1Group.sourceText,
+        dominantCount: ranked[0].count,
+        totalCount: p1Group.rows.length
+      };
+      p1DomCache.set(p1Key, p1Dom);
+    }
+
+    if (!p1Dom) continue;
+
+    const t = row.targets.get(tgtColIdx);
+    if (!t?.rawText) continue;
+
+    const p2Norm = t.fullNorm || '';
+    if (!p2Norm) continue;
+
+    if (termContainedIn(p1Dom.norm, p2Norm)) continue;
+
+    issues.push({
+      type: 'crossPriority',
+      typeLabel: 'P1 미반영',
+      category: row.category,
+      priority: 2,
+      basisText: row.baseText,
+      representativeText: p1Dom.display,
+      problemText: t.strippedDisplay || t.rawText,
+      note: `P1 대표 ${p1Dom.dominantCount}/${p1Dom.totalCount}행`,
+      rows: [row.rowIdx]
+    });
+
+    badRows.add(row.rowIdx);
+    addRowMessage(
+      rowMessages,
+      row.rowIdx,
+      `P1 번역 미반영 [${formatCategory(row.category)}/P2/${row.sourceText}] P1 기준: ${p1Dom.display} | P2 실제: ${t.rawText}`
+    );
+  }
+
+  return issues;
+}
+
 function buildGlossary(preparedRows, fullGroups, tgtColIdx) {
   const glossaryByCategory = new Map();
 
@@ -1171,13 +1335,15 @@ function analyzeColumnAuto(preparedRows, fullGroups, baseGroups, tgtColIdx, hasP
   const fullIssues = analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, false, rowMessages, badRows);
   const baseIssues = analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColumn, rowMessages, badRows);
 
+  let crossPriorityIssues = [];
   let sentenceIssues = [];
   if (hasPriorityColumn) {
+    crossPriorityIssues = analyzeCrossPriorityCheck(preparedRows, fullGroups, tgtColIdx, rowMessages, badRows);
     const glossaryByCategory = buildGlossary(preparedRows, fullGroups, tgtColIdx);
     sentenceIssues = analyzeSentenceRows(preparedRows, glossaryByCategory, tgtColIdx, rowMessages, badRows);
   }
 
-  const issues = [...baseIssues, ...fullIssues, ...sentenceIssues];
+  const issues = [...crossPriorityIssues, ...baseIssues, ...fullIssues, ...sentenceIssues];
   issues.sort((a, b) =>
     (ISSUE_TYPE_ORDER[a.type] - ISSUE_TYPE_ORDER[b.type]) ||
     safeLocale(formatCategory(a.category), formatCategory(b.category)) ||
@@ -1191,6 +1357,7 @@ function analyzeColumnAuto(preparedRows, fullGroups, baseGroups, tgtColIdx, hasP
     rowMessages,
     badRows,
     summary: {
+      crossPriority: crossPriorityIssues.length,
       full: fullIssues.length,
       base: baseIssues.length,
       sentence: sentenceIssues.length
@@ -1551,6 +1718,13 @@ function doAnalyze() {
   for (const [, { issues }] of analysisResult) total += issues.length;
   $('statIssue').textContent = `불일치 ${total}`;
 
+  // 분석 재실행 시 필터 초기화
+  filterType = 'all';
+  filterPri = 'all';
+  $('filterBar').querySelectorAll('[data-ftype]').forEach((b, i) => b.classList.toggle('f-active', i === 0));
+  $('filterBar').querySelectorAll('[data-fpri]').forEach((b, i) => b.classList.toggle('f-active', i === 0));
+  $('filteredCount').textContent = '';
+
   renderIssues(tgtColIdxArr);
   $('downloadBtn').disabled = false;
 }
@@ -1560,75 +1734,73 @@ function renderIssues(tgtColIdxArr) {
   area.innerHTML = '';
   $('emptyState').style.display = 'none';
   area.style.display = '';
+  $('filterBar').style.display = '';
 
-  let totalIssues = 0;
-  let okCols = 0;
-  let totalBaseIssues = 0;
-
+  let totalIssues = 0, totalCross = 0, totalBase = 0, totalFull = 0, totalSent = 0, okCols = 0;
   for (const [, { issues, summary }] of analysisResult) {
     totalIssues += issues.length;
-    totalBaseIssues += summary.base;
+    totalCross += summary.crossPriority || 0;
+    totalBase += summary.base || 0;
+    totalFull += summary.full || 0;
+    totalSent += summary.sentence || 0;
     if (!issues.length) okCols++;
   }
-
   const badRowCount = badSet ? badSet.size : 0;
 
   const frag = document.createDocumentFragment();
 
+  // --- 요약 바 ---
   const bar = document.createElement('div');
   bar.className = 'summary-bar';
-
-  const c1 = document.createElement('span');
-  c1.className = 's-chip';
-  c1.textContent = `불일치 ${totalIssues}건`;
-  bar.appendChild(c1);
-
-  const c2 = document.createElement('span');
-  c2.className = 's-chip violet';
-  c2.textContent = `base 검수 ${totalBaseIssues}건`;
-  bar.appendChild(c2);
-
-  const c3 = document.createElement('span');
-  c3.className = 's-chip info';
-  c3.textContent = `문제 행 ${badRowCount}개`;
-  bar.appendChild(c3);
-
-  if (okCols) {
-    const c4 = document.createElement('span');
-    c4.className = 's-chip ok';
-    c4.textContent = `이상 없는 열 ${okCols}개`;
-    bar.appendChild(c4);
+  const chipDefs = [
+    ['s-chip', `불일치 ${totalIssues}건`],
+    ['s-chip cross', `P1 미반영 ${totalCross}건`],
+    ['s-chip violet', `대표어(base) ${totalBase}건`],
+    ['s-chip info', `전체 원문 ${totalFull}건`],
+    ['s-chip', `P3 문장 ${totalSent}건`],
+    ['s-chip info', `문제 행 ${badRowCount}개`],
+  ];
+  if (okCols) chipDefs.push(['s-chip ok', `이상 없는 열 ${okCols}개`]);
+  chipDefs.push(['s-chip info', `전체 ${dataRows.length}행 · ${tgtColIdxArr.length}개 비교 열`]);
+  for (const [cls, txt] of chipDefs) {
+    const c = document.createElement('span');
+    c.className = cls;
+    c.textContent = txt;
+    bar.appendChild(c);
   }
-
-  const c5 = document.createElement('span');
-  c5.className = 's-chip info';
-  c5.textContent = `전체 ${dataRows.length}행 · ${tgtColIdxArr.length}개 비교 열`;
-  bar.appendChild(c5);
-
   frag.appendChild(bar);
 
+  // --- 이슈 카드 ---
   for (const [colName, { issues, summary }] of analysisResult) {
     const card = document.createElement('div');
     card.className = 'issue-card';
 
+    // 헤드 (클릭으로 접기/펼치기)
     const head = document.createElement('div');
     head.className = 'icard-head';
-
+    const cross = summary.crossPriority || 0;
     if (issues.length) {
       head.innerHTML = `
         <span class="icard-colname">${escHtml(colName)}</span>
         <span class="icard-count">총 ${issues.length}건</span>
-        <span class="icard-count">전체 원문 ${summary.full}건</span>
-        <span class="icard-count">대표어(base) ${summary.base}건</span>
-        <span class="icard-count">문장(P3) ${summary.sentence}건</span>
+        ${cross ? `<span class="icard-count" style="color:#ff6b6b">P1미반영 ${cross}건</span>` : ''}
+        <span class="icard-count">대표어 ${summary.base || 0}건</span>
+        <span class="icard-count">전체원문 ${summary.full || 0}건</span>
+        <span class="icard-count">P3 ${summary.sentence || 0}건</span>
+        <span class="icard-toggle">▲</span>
       `;
     } else {
       head.innerHTML = `
         <span class="icard-colname">${escHtml(colName)}</span>
         <span class="icard-ok">✓ 이상 없음</span>
+        <span class="icard-toggle" style="visibility:hidden">▲</span>
       `;
     }
     card.appendChild(head);
+
+    // 바디 (접기 대상)
+    const body = document.createElement('div');
+    body.className = 'icard-body';
 
     if (issues.length) {
       const table = document.createElement('table');
@@ -1640,27 +1812,28 @@ function renderIssues(tgtColIdxArr) {
             <th>분류</th>
             <th>P</th>
             <th>기준어 / base</th>
-            <th>대표 번역</th>
-            <th>문제 값 / 상태</th>
+            <th>기준 번역 (P1/대표)</th>
+            <th>실제 번역 / 상태 <span style="font-weight:400;opacity:.6;font-size:10px">주황=불일치 단어</span></th>
             <th>행 번호 (Excel)</th>
           </tr>
         </thead>
       `;
 
       const tbody = document.createElement('tbody');
-
       for (const issue of issues) {
         const tr = document.createElement('tr');
+        tr.className = 'issue-row';
+        tr.dataset.itype = issue.type;
+        tr.dataset.ipri = String(issue.priority);
 
+        // 종류 배지
+        const kindClass =
+          issue.type === 'crossPriority' ? 'cross' :
+          issue.type === 'base' ? 'base' :
+          issue.type === 'sentence' ? 'sentence' : 'full';
         const tdKind = document.createElement('td');
         tdKind.className = 'td-kind';
-        const kindBadge = document.createElement('span');
-        kindBadge.className = 'badge-kind ' + (
-          issue.type === 'base' ? 'base' :
-          issue.type === 'sentence' ? 'sentence' : 'full'
-        );
-        kindBadge.textContent = issue.typeLabel;
-        tdKind.appendChild(kindBadge);
+        tdKind.innerHTML = `<span class="badge-kind ${kindClass}">${escHtml(issue.typeLabel)}</span>`;
         tr.appendChild(tdKind);
 
         const tdCat = document.createElement('td');
@@ -1678,22 +1851,17 @@ function renderIssues(tgtColIdxArr) {
         tdSrc.textContent = issue.basisText;
         tr.appendChild(tdSrc);
 
+        // 기준 번역 (대표/P1)
         const tdFirst = document.createElement('td');
         tdFirst.className = 'td-first';
-        const firstBadge = document.createElement('span');
-        firstBadge.className = 'badge-first';
-        firstBadge.textContent = '대표';
-        tdFirst.appendChild(firstBadge);
-        tdFirst.appendChild(document.createTextNode(issue.representativeText || '(비어있음)'));
+        tdFirst.innerHTML = `<span class="badge-first">기준</span>${escHtml(issue.representativeText || '(비어있음)')}`;
         tr.appendChild(tdFirst);
 
+        // 실제 번역 — diff 하이라이트
         const tdBad = document.createElement('td');
         tdBad.className = 'td-bad';
-        const badBadge = document.createElement('span');
-        badBadge.className = 'badge-bad';
-        badBadge.textContent = issue.type === 'sentence' ? '상태' : '문제';
-        tdBad.appendChild(badBadge);
-        tdBad.appendChild(document.createTextNode(issue.problemText || '(비어있음)'));
+        const badLabel = issue.type === 'sentence' ? '상태' : '실제';
+        tdBad.innerHTML = `<span class="badge-bad">${badLabel}</span>${diffWordsHtml(issue.representativeText, issue.problemText)}`;
         if (issue.note) {
           const noteDiv = document.createElement('div');
           noteDiv.className = 'td-note';
@@ -1711,13 +1879,23 @@ function renderIssues(tgtColIdxArr) {
       }
 
       table.appendChild(tbody);
-      card.appendChild(table);
+      body.appendChild(table);
     }
+
+    card.appendChild(body);
+
+    // 접기/펼치기 이벤트
+    head.addEventListener('click', () => {
+      if (!issues.length) return;
+      head.classList.toggle('collapsed');
+      body.classList.toggle('collapsed');
+    });
 
     frag.appendChild(card);
   }
 
   area.appendChild(frag);
+  applyIssueFilter();
 }
 
 $('downloadBtn').addEventListener('click', downloadExcel);
@@ -1861,6 +2039,41 @@ document.querySelectorAll('.mode-group input:checked').forEach(checked => {
 const curPage = (location.pathname.split('/').pop() || '').toLowerCase();
 document.querySelectorAll('.nav a[data-page]').forEach(a => {
   if ((a.dataset.page || '').toLowerCase() === curPage) a.classList.add('active');
+});
+
+// --- 필터 ---
+let filterType = 'all';
+let filterPri = 'all';
+
+function applyIssueFilter() {
+  const rows = document.querySelectorAll('.issue-row');
+  let vis = 0;
+  rows.forEach(tr => {
+    const ok = (filterType === 'all' || tr.dataset.itype === filterType)
+             && (filterPri === 'all' || tr.dataset.ipri === filterPri);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) vis++;
+  });
+  const isFiltered = filterType !== 'all' || filterPri !== 'all';
+  const fc = $('filteredCount');
+  if (fc) fc.textContent = isFiltered ? `표시 ${vis}건` : '';
+}
+
+$('filterBar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+
+  if ('ftype' in btn.dataset) {
+    filterType = btn.dataset.ftype;
+    $('filterBar').querySelectorAll('[data-ftype]').forEach(b => b.classList.remove('f-active'));
+    btn.classList.add('f-active');
+  } else if ('fpri' in btn.dataset) {
+    filterPri = btn.dataset.fpri;
+    $('filterBar').querySelectorAll('[data-fpri]').forEach(b => b.classList.remove('f-active'));
+    btn.classList.add('f-active');
+  }
+
+  applyIssueFilter();
 });
 </script>
 </body>
