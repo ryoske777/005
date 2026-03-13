@@ -394,6 +394,18 @@
 
   <div class="sep"></div>
 
+  <span style="font-size:11px;font-weight:800;color:var(--muted)">P3 매칭</span>
+  <div class="mode-group" id="tokenMatchGroup">
+    <label data-tip="glossary 용어의 모든 단어가 번역 결과에 포함되면 일치로 판정합니다.&#10;단어 순서는 무관합니다. (기본값 — 13개 언어 권장)">
+      <input type="radio" name="tokenMatch" value="unordered" checked> 순서 무관
+    </label>
+    <label data-tip="glossary 용어의 단어들이 동일한 순서로 나타나야 일치로 판정합니다.&#10;더 엄격한 검사가 필요할 때 사용하세요.">
+      <input type="radio" name="tokenMatch" value="ordered"> 순서 유지
+    </label>
+  </div>
+
+  <div class="sep"></div>
+
   <span class="stat"><span class="dot-w"></span><span id="statIssue">불일치 0</span></span>
   <span class="stat" id="statRows" style="display:none"><span class="dot-m"></span><span id="statRowsText"></span></span>
 
@@ -608,13 +620,33 @@ function parseTargetCell(v) {
   };
 }
 
+function getTokenMatchMode() {
+  const el = document.querySelector('input[name="tokenMatch"]:checked');
+  return el ? el.value : 'unordered';
+}
+
 function containsComparable(sentenceNorm, termNorm) {
   if (!sentenceNorm || !termNorm) return false;
 
   if (/[a-z]/i.test(termNorm)) {
-    const s = ` ${sentenceNorm} `;
-    const t = ` ${termNorm} `;
-    return s.includes(t);
+    const sTokens = sentenceNorm.split(/\s+/).filter(Boolean);
+    const tTokens = termNorm.split(/\s+/).filter(Boolean);
+    if (!tTokens.length) return false;
+
+    if (getTokenMatchMode() === 'ordered') {
+      // 순서 유지: 토큰이 같은 순서로 나타나야 함 (subsequence)
+      let si = 0;
+      for (const t of tTokens) {
+        while (si < sTokens.length && sTokens[si] !== t) si++;
+        if (si >= sTokens.length) return false;
+        si++;
+      }
+      return true;
+    } else {
+      // 순서 무관: 모든 토큰이 어딘가에 포함되면 OK (set containment)
+      const sSet = new Set(sTokens);
+      return tTokens.every(t => sSet.has(t));
+    }
   }
   return sentenceNorm.includes(termNorm);
 }
@@ -1783,16 +1815,20 @@ async function downloadExcel() {
 
 document.querySelectorAll('.mode-group label').forEach(label => {
   label.addEventListener('click', () => {
-    document.querySelectorAll('.mode-group label').forEach(l => l.classList.remove('active'));
+    label.closest('.mode-group').querySelectorAll('label').forEach(l => l.classList.remove('active'));
     label.classList.add('active');
     const r = label.querySelector('input');
     if (r) r.checked = true;
+    // tokenMatch 그룹 변경 시 분석 결과가 있으면 자동 재실행
+    if (r && r.name === 'tokenMatch' && analysisResult && analysisResult.size > 0) {
+      doAnalyze();
+    }
   });
 });
-const checkedMode = document.querySelector('.mode-group input:checked');
-if (checkedMode && checkedMode.closest('label')) {
-  checkedMode.closest('label').classList.add('active');
-}
+document.querySelectorAll('.mode-group input:checked').forEach(checked => {
+  const lbl = checked.closest('label');
+  if (lbl) lbl.classList.add('active');
+});
 
 const curPage = (location.pathname.split('/').pop() || '').toLowerCase();
 document.querySelectorAll('.nav a[data-page]').forEach(a => {
