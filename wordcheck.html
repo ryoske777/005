@@ -1118,50 +1118,63 @@ function analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColum
 
 function analyzeCrossPriorityCheck(preparedRows, fullGroups, tgtColIdx, rowMessages, badRows) {
   const issues = [];
-  const p1DomCache = new Map();
+
+  // 카테고리별 P1 그룹 목록 구성 (접두어 매칭용)
+  const p1ByCategory = new Map();
+  for (const [, group] of fullGroups) {
+    if (group.priority !== 1 || !group.sourceNorm) continue;
+    if (!p1ByCategory.has(group.category)) p1ByCategory.set(group.category, []);
+    p1ByCategory.get(group.category).push(group);
+  }
+  if (!p1ByCategory.size) return issues;
+
+  // P1 대표 번역 캐시
+  const domCache = new Map();
+  function getP1Dom(group) {
+    if (domCache.has(group.key)) return domCache.get(group.key);
+    const counter = new Map();
+    for (const rowIdx of group.rows) {
+      const t = preparedRows[rowIdx]?.targets.get(tgtColIdx);
+      const k = t?.fullNorm || '__EMPTY__';
+      if (!counter.has(k)) counter.set(k, { count: 0, firstOrder: rowIdx, display: t?.rawText || '', norm: t?.fullNorm || '' });
+      counter.get(k).count++;
+    }
+    const ranked = pickDominantFromCounter(counter);
+    const dom = (ranked.length && ranked[0].norm) ? {
+      display: ranked[0].display,
+      norm: ranked[0].norm,
+      dominantCount: ranked[0].count,
+      totalCount: group.rows.length
+    } : null;
+    domCache.set(group.key, dom);
+    return dom;
+  }
+
+  // P2 행 → 대응 P1 그룹 캐시 (같은 카테고리 내에서 최장 접두어 매칭)
+  const matchCache = new Map();
 
   for (const row of preparedRows) {
-    if (row.priority !== 2) continue;
-    if (!row.baseNorm) continue;
+    if (row.priority !== 2 || !row.sourceNorm) continue;
 
-    const p1Key = `${row.category}||1||${row.baseNorm}`;
-
-    let p1Dom;
-    if (p1DomCache.has(p1Key)) {
-      p1Dom = p1DomCache.get(p1Key);
+    const cacheKey = `${row.category}||${row.sourceNorm}`;
+    let p1Group;
+    if (matchCache.has(cacheKey)) {
+      p1Group = matchCache.get(cacheKey);
     } else {
-      const p1Group = fullGroups.get(p1Key);
-      if (!p1Group) {
-        p1DomCache.set(p1Key, null);
-        continue;
+      // P2 소스가 P1 소스를 접두어로 포함하고, P1보다 길어야 함 (동일하면 별개 맥락 번역)
+      const list = p1ByCategory.get(row.category) || [];
+      p1Group = null;
+      for (const g of list) {
+        if (g.sourceNorm.length >= row.sourceNorm.length) continue;
+        if (!row.sourceNorm.startsWith(g.sourceNorm)) continue;
+        if (!p1Group || g.sourceNorm.length > p1Group.sourceNorm.length) p1Group = g;
       }
-
-      const counter = new Map();
-      for (const rowIdx of p1Group.rows) {
-        const t = preparedRows[rowIdx]?.targets.get(tgtColIdx);
-        const key = t?.fullNorm || '__EMPTY__';
-        if (!counter.has(key)) {
-          counter.set(key, { count: 0, firstOrder: rowIdx, display: t?.rawText || '', norm: t?.fullNorm || '' });
-        }
-        counter.get(key).count++;
-      }
-
-      const ranked = pickDominantFromCounter(counter);
-      if (!ranked.length || !ranked[0].norm) {
-        p1DomCache.set(p1Key, null);
-        continue;
-      }
-
-      p1Dom = {
-        display: ranked[0].display,
-        norm: ranked[0].norm,
-        sourceText: p1Group.sourceText,
-        dominantCount: ranked[0].count,
-        totalCount: p1Group.rows.length
-      };
-      p1DomCache.set(p1Key, p1Dom);
+      matchCache.set(cacheKey, p1Group);
     }
 
+    if (!p1Group) continue;
+
+    const p1Dom = getP1Dom(p1Group);
     if (!p1Dom) continue;
 
     const t = row.targets.get(tgtColIdx);
@@ -1177,10 +1190,10 @@ function analyzeCrossPriorityCheck(preparedRows, fullGroups, tgtColIdx, rowMessa
       typeLabel: 'P1 미반영',
       category: row.category,
       priority: 2,
-      basisText: row.baseText,
+      basisText: row.sourceText,
       representativeText: p1Dom.display,
       problemText: t.strippedDisplay || t.rawText,
-      note: `P1 대표 ${p1Dom.dominantCount}/${p1Dom.totalCount}행`,
+      note: `P1 기준어: "${p1Group.sourceText}" (대표 ${p1Dom.dominantCount}/${p1Dom.totalCount}행)`,
       rows: [row.rowIdx]
     });
 
