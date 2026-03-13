@@ -1122,6 +1122,7 @@ function analyzeCrossPriorityCheck(preparedRows, fullGroups, tgtColIdx, rowMessa
 
   for (const row of preparedRows) {
     if (row.priority !== 2) continue;
+    if (!row.hasVariant) continue;  // 괄호 변형 없는 P2는 별개 맥락 번역 — 포함 체크 제외
     if (!row.baseNorm) continue;
 
     const p1Key = `${row.category}||1||${row.baseNorm}`;
