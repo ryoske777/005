@@ -214,10 +214,12 @@
 
     .content-empty {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 8px; padding: 60px 20px;
+      gap: 6px; padding: 60px 20px;
       color: var(--muted); font-size: 13px; text-align: center;
     }
-    .content-empty .ci-icon { font-size: 36px; opacity: .4; }
+    .content-empty .ci-icon { font-size: 40px; opacity: .5; margin-bottom: 4px; }
+    .content-empty .ci-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .content-empty .ci-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
 
     .summary-bar {
       display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -513,8 +515,9 @@
 
 <div class="content" id="content">
   <div class="content-empty" id="emptyState">
-    <div class="ci-icon">📋</div>
-    <div>엑셀 파일을 업로드하고 열을 선택한 뒤 분석 버튼을 누르세요.</div>
+    <div class="ci-icon">🔍</div>
+    <div class="ci-title">번역이 제대로 옮겨졌는지 확인해볼까요?</div>
+    <div class="ci-desc">글로서리 엑셀 파일을 업로드하면<br>용어 일관성 검사를 바로 시작할 수 있어요</div>
   </div>
   <div id="issueArea" style="display:none"></div>
 </div>
@@ -1585,6 +1588,11 @@ function loadSheetData(sheetIdx) {
 
   $('statIssue').textContent = '불일치 0';
   $('downloadBtn').disabled = true;
+  $('emptyState').innerHTML = `
+    <div class="ci-icon">🎯</div>
+    <div class="ci-title">파일 준비 완료!</div>
+    <div class="ci-desc">열 설정을 마치고 ⑤ 분석 버튼을 누르면<br>검사가 바로 시작돼요</div>
+  `;
   $('emptyState').style.display = '';
   $('issueArea').style.display = 'none';
   $('issueArea').innerHTML = '';
