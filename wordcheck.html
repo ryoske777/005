@@ -110,18 +110,19 @@
     [data-tip] { position: relative; }
     [data-tip]::after {
       content: attr(data-tip);
-      position: absolute; bottom: calc(100% + 7px); left: 50%;
-      transform: translateX(-50%);
-      max-width: 340px; white-space: normal; text-align: left;
-      padding: 6px 9px; border-radius: 8px;
+      position: absolute; bottom: calc(100% + 7px); left: 0;
+      transform: none;
+      width: max-content; min-width: 220px; max-width: 320px;
+      white-space: normal; text-align: left; word-break: keep-all;
+      padding: 8px 11px; border-radius: 8px;
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(10,14,22,0.97);
-      color: rgba(230,237,243,0.92); font-size: 11px; line-height: 1.45;
+      color: rgba(230,237,243,0.92); font-size: 11.5px; line-height: 1.6;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
       opacity: 0; pointer-events: none; transition: opacity .1s; z-index: 9999;
     }
     [data-tip]:hover::after { opacity: 1; }
-    .toolbar [data-tip]::after { bottom: auto; top: calc(100% + 7px); }
+    .toolbar [data-tip]::after { bottom: auto; top: calc(100% + 7px); left: 0; }
 
     .setup {
       flex-shrink: 0;
@@ -335,9 +336,14 @@
     /* Auto-detect badge */
     .setup-auto-badge {
       display: inline-flex; align-items: center;
-      font-size: 10px; font-weight: 700; color: var(--ok);
+      font-size: 9.5px; font-weight: 700; color: var(--ok);
       background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3);
-      border-radius: 4px; padding: 1px 6px; white-space: nowrap;
+      border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+      vertical-align: middle; margin-left: 4px; letter-spacing: 0;
+    }
+    .setup-auto-badge.manual {
+      color: var(--muted);
+      background: rgba(125,133,144,0.1); border-color: rgba(125,133,144,0.3);
     }
   </style>
 </head>
@@ -378,10 +384,10 @@
 
   <span style="font-size:11px;font-weight:800;color:var(--muted)">검사 방식</span>
   <div class="mode-group">
-    <label data-tip="분류 + 우선순위를 반영합니다. P1/P2는 전체 원문 기준 검수, P2 중심으로 대표어(base) 검수, P3는 문장 내 기준 용어 포함 여부를 검사합니다.">
+    <label data-tip="분류와 우선순위를 반영해 검수합니다.&#10;• P1/P2: 전체 원문 기준 검수&#10;• P2(base): 대표어 중심 검수&#10;• P3: 문장 내 기준 용어 포함 여부 검사">
       <input type="radio" name="mode" value="auto" checked> 자동 검수
     </label>
-    <label data-tip="우선순위/분류 특수 처리를 하지 않고 같은 기준값의 전체 셀 번역만 비교합니다.">
+    <label data-tip="우선순위/분류 처리 없이 동일 기준값의 전체 셀 번역만 단순 비교합니다.">
       <input type="radio" name="mode" value="cell"> 단순 셀 전체
     </label>
   </div>
@@ -408,15 +414,13 @@
   </div>
 
   <div class="setup-item">
-    <span class="setup-lbl">③ 우선순위 열</span>
+    <span class="setup-lbl">③ 우선순위 열 <span class="setup-auto-badge" id="priorityAutoBadge" style="display:none"></span></span>
     <select id="priorityColSelect"></select>
-    <span class="setup-auto-badge" id="priorityAutoBadge" style="display:none"></span>
   </div>
 
   <div class="setup-item">
-    <span class="setup-lbl">④ 분류 열</span>
+    <span class="setup-lbl">④ 분류 열 <span class="setup-auto-badge" id="categoryAutoBadge" style="display:none"></span></span>
     <select id="categoryColSelect"></select>
-    <span class="setup-auto-badge" id="categoryAutoBadge" style="display:none"></span>
   </div>
 
   <div class="setup-item" style="padding-bottom:1px">
@@ -444,8 +448,8 @@ let analysisResult = null; // Map<tgtColName, { issues, tgtColIdx, summary }>
 let badSet = null;         // Map<rowIdx, Set<tgtColIdx>>
 let resultMap = null;      // Map<rowIdx, Map<tgtColIdx, string[]>>
 
-const PRIORITY_HEADER_HINTS = [/^우선순위$/i, /^priority$/i, /우선순위/i, /priority/i];
-const CATEGORY_HEADER_HINTS = [/^분류$/i, /^category$/i, /^type$/i, /분류/i, /category/i, /type/i];
+const PRIORITY_HEADER_HINTS = [/^우선순위$/, /^priority$/i, /우선순위/];
+const CATEGORY_HEADER_HINTS = [/^분류$/, /^category$/i, /^match_type$/i, /분류/];
 const ISSUE_TYPE_ORDER = { base: 0, full: 1, sentence: 2 };
 
 function escHtml(s) {
@@ -470,9 +474,10 @@ function uniq(arr) {
 }
 
 function detectHeaderIndex(hints) {
-  for (let i = 0; i < headers.length; i++) {
-    const h = cellStr(headers[i]);
-    if (hints.some(re => re.test(h))) return i;
+  for (const re of hints) {
+    for (let i = 0; i < headers.length; i++) {
+      if (re.test(cellStr(headers[i]))) return i;
+    }
   }
   return -1;
 }
@@ -1336,19 +1341,15 @@ function populateColumnSelectors() {
   const priDetected = detectHeaderIndex(PRIORITY_HEADER_HINTS);
   const catDetected = detectHeaderIndex(CATEGORY_HEADER_HINTS);
 
-  let defaultSrc = headers.findIndex((_, i) => i !== priDetected && i !== catDetected);
-  if (defaultSrc < 0) defaultSrc = 0;
-
   // Source column
   const srcSel = $('srcColSelect');
-  srcSel.innerHTML = '';
+  srcSel.innerHTML = '<option value="" disabled selected style="color:var(--muted)">원본 언어 선택</option>';
   headers.forEach((h, i) => {
     const opt = document.createElement('option');
     opt.value = i;
     opt.textContent = h;
     srcSel.appendChild(opt);
   });
-  srcSel.value = String(defaultSrc);
 
   // Priority column
   const priSel = $('priorityColSelect');
@@ -1362,7 +1363,8 @@ function populateColumnSelectors() {
   const priBadge = $('priorityAutoBadge');
   if (priDetected >= 0) {
     priSel.value = String(priDetected);
-    priBadge.textContent = `자동 감지: ${headers[priDetected]}`;
+    priBadge.textContent = `자동감지`;
+    priBadge.className = 'setup-auto-badge';
     priBadge.style.display = '';
   } else {
     priBadge.style.display = 'none';
@@ -1380,7 +1382,8 @@ function populateColumnSelectors() {
   const catBadge = $('categoryAutoBadge');
   if (catDetected >= 0) {
     catSel.value = String(catDetected);
-    catBadge.textContent = `자동 감지: ${headers[catDetected]}`;
+    catBadge.textContent = `자동감지`;
+    catBadge.className = 'setup-auto-badge';
     catBadge.style.display = '';
   } else {
     catBadge.style.display = 'none';
@@ -1388,13 +1391,43 @@ function populateColumnSelectors() {
 
   // Target column (single select)
   const tgtSel = $('tgtColSelect');
-  tgtSel.innerHTML = '<option value="">열을 선택하세요</option>';
+  tgtSel.innerHTML = '<option value="" disabled selected style="color:var(--muted)">번역 언어 선택</option>';
   headers.forEach((h, i) => {
     const opt = document.createElement('option');
     opt.value = i;
     opt.textContent = h;
     tgtSel.appendChild(opt);
   });
+
+  // Attach badge-update listeners (once per load)
+  if (!priSel._badgeListenerAdded) {
+    priSel._badgeListenerAdded = true;
+    priSel.addEventListener('change', () => {
+      const badge = $('priorityAutoBadge');
+      if (!priSel.value) { badge.style.display = 'none'; return; }
+      badge.style.display = '';
+      const autoVal = detectHeaderIndex(PRIORITY_HEADER_HINTS);
+      if (autoVal >= 0 && String(autoVal) === priSel.value) {
+        badge.textContent = '자동감지'; badge.className = 'setup-auto-badge';
+      } else {
+        badge.textContent = '수동선택'; badge.className = 'setup-auto-badge manual';
+      }
+    });
+  }
+  if (!catSel._badgeListenerAdded) {
+    catSel._badgeListenerAdded = true;
+    catSel.addEventListener('change', () => {
+      const badge = $('categoryAutoBadge');
+      if (!catSel.value) { badge.style.display = 'none'; return; }
+      badge.style.display = '';
+      const autoVal = detectHeaderIndex(CATEGORY_HEADER_HINTS);
+      if (autoVal >= 0 && String(autoVal) === catSel.value) {
+        badge.textContent = '자동감지'; badge.className = 'setup-auto-badge';
+      } else {
+        badge.textContent = '수동선택'; badge.className = 'setup-auto-badge manual';
+      }
+    });
+  }
 
   refreshTgtSelectState();
 }
@@ -1413,15 +1446,6 @@ function refreshTgtSelectState() {
     }
   });
 
-  // Auto-select first non-excluded column if nothing selected
-  if (!tgtSel.value) {
-    for (let i = 0; i < headers.length; i++) {
-      if (!excluded.has(i)) {
-        tgtSel.value = String(i);
-        break;
-      }
-    }
-  }
 }
 
 $('srcColSelect').addEventListener('change', refreshTgtSelectState);
