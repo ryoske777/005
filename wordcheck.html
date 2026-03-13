@@ -123,6 +123,7 @@
     }
     [data-tip]:hover::after { opacity: 1; }
     .toolbar [data-tip]::after { bottom: auto; top: calc(100% + 7px); left: 0; }
+    .filter-bar [data-tip]::after { bottom: auto; top: calc(100% + 7px); left: 0; }
 
     .setup {
       flex-shrink: 0;
@@ -461,17 +462,17 @@
 
 <div class="filter-bar" id="filterBar" style="display:none">
   <span style="font-size:11px;font-weight:800;color:var(--muted)">종류</span>
-  <button class="filter-btn f-active" data-ftype="all">전체</button>
-  <button class="filter-btn" data-ftype="crossPriority">P1 미반영</button>
-  <button class="filter-btn" data-ftype="base">대표어(base)</button>
-  <button class="filter-btn" data-ftype="full">전체 원문</button>
-  <button class="filter-btn" data-ftype="sentence">P3 문장</button>
+  <button class="filter-btn f-active" data-ftype="all" data-tip="감지된 모든 종류의 불일치를 함께 표시합니다.">전체</button>
+  <button class="filter-btn" data-ftype="crossPriority" data-tip="P2 번역에 P1 기준 번역이 빠진 항목입니다.&#10;파생어·복합어에서 기준 번역이 유지되는지 확인합니다.">P1 미반영</button>
+  <button class="filter-btn" data-ftype="base" data-tip="같은 기준어를 가진 P2 항목들의 번역이 서로 다른 경우입니다.&#10;동일 원문인데 번역이 달라 일관성이 깨진 항목을 찾습니다.">대표어(base)</button>
+  <button class="filter-btn" data-ftype="full" data-tip="P1 기준어의 대표 번역과 실제 번역이 다른 항목입니다.&#10;P1 전체 원문을 기준으로 완전 불일치를 감지합니다.">전체 원문</button>
+  <button class="filter-btn" data-ftype="sentence" data-tip="문장(P3) 안에 P1·P2 기준 번역이 포함되지 않은 항목입니다.&#10;문장 번역에서 용어가 올바르게 사용됐는지 확인합니다.">P3 문장</button>
   <div class="sep"></div>
   <span style="font-size:11px;font-weight:800;color:var(--muted)">우선순위</span>
-  <button class="filter-btn f-active" data-fpri="all">전체</button>
-  <button class="filter-btn" data-fpri="1">P1</button>
-  <button class="filter-btn" data-fpri="2">P2</button>
-  <button class="filter-btn" data-fpri="3">P3</button>
+  <button class="filter-btn f-active" data-fpri="all" data-tip="모든 우선순위(P1·P2·P3) 항목을 함께 표시합니다.">전체</button>
+  <button class="filter-btn" data-fpri="1" data-tip="최상위 기준어 항목입니다.&#10;단독으로 쓰이는 대표 번역 — 다른 P2·P3의 기준이 됩니다.">P1</button>
+  <button class="filter-btn" data-fpri="2" data-tip="P1의 파생·변형 항목입니다.&#10;기준어를 포함한 복합어·파생어로, P1 번역을 유지해야 합니다.">P2</button>
+  <button class="filter-btn" data-fpri="3" data-tip="문장 단위 항목입니다.&#10;P1·P2 기준 번역이 문장 안에 올바르게 포함돼 있는지 검사합니다.">P3</button>
   <div class="sep"></div>
   <span id="filteredCount" style="font-size:11px;color:var(--muted)"></span>
 </div>
