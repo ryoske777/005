@@ -308,6 +308,37 @@
       border: 1px solid rgba(255,123,114,0.35);
       color: #ff9b95;
     }
+
+    /* Loading overlay */
+    #loadingOverlay {
+      position: fixed; inset: 0; z-index: 9998;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px;
+      background: rgba(13,17,23,0.88);
+      backdrop-filter: blur(8px);
+    }
+    .loading-ring { position: relative; width: 120px; height: 120px; }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 10; }
+    .ring-fill {
+      fill: none; stroke: var(--accent); stroke-width: 10;
+      stroke-dasharray: 314.16; stroke-dashoffset: 314.16;
+      transform-origin: 60px 60px; transform: rotate(-90deg);
+      transition: stroke-dashoffset 0.22s ease;
+    }
+    .ring-percent {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 22px; font-weight: 900; color: var(--text);
+    }
+    .loading-label { font-size: 13px; color: var(--muted); }
+
+    /* Auto-detect badge */
+    .setup-auto-badge {
+      display: inline-flex; align-items: center;
+      font-size: 10px; font-weight: 700; color: var(--ok);
+      background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3);
+      border-radius: 4px; padding: 1px 6px; white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -315,6 +346,17 @@
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-overlay-icon">📂</div>
   <div class="drop-overlay-txt">xlsx / xls 파일을 여기에 놓으세요</div>
+</div>
+
+<div id="loadingOverlay">
+  <div class="loading-ring">
+    <svg viewBox="0 0 120 120" width="120" height="120">
+      <circle class="ring-bg" cx="60" cy="60" r="50"/>
+      <circle id="ringProgress" class="ring-fill" cx="60" cy="60" r="50"/>
+    </svg>
+    <div id="ringPercent" class="ring-percent">0%</div>
+  </div>
+  <div class="loading-label">파일 분석 중...</div>
 </div>
 
 <nav class="nav">
@@ -361,32 +403,20 @@
   </div>
 
   <div class="setup-item">
-    <span class="setup-lbl">② 우선순위 열</span>
+    <span class="setup-lbl">② 비교 열 (번역 결과)</span>
+    <select id="tgtColSelect"></select>
+  </div>
+
+  <div class="setup-item">
+    <span class="setup-lbl">③ 우선순위 열</span>
     <select id="priorityColSelect"></select>
-    <span class="setup-note">예: 우선순위</span>
+    <span class="setup-auto-badge" id="priorityAutoBadge" style="display:none"></span>
   </div>
 
   <div class="setup-item">
-    <span class="setup-lbl">③ 분류 열</span>
+    <span class="setup-lbl">④ 분류 열</span>
     <select id="categoryColSelect"></select>
-    <span class="setup-note">예: 분류</span>
-  </div>
-
-  <div class="setup-item">
-    <span class="setup-lbl">④ 비교 열 (번역 결과, 복수 선택)</span>
-    <div class="ms-wrap" id="msWrap">
-      <button class="ms-btn" id="msBtn" type="button">
-        <span class="ms-label" id="msBtnLabel">열을 선택하세요</span>
-        <span class="ms-arrow">▼</span>
-      </button>
-      <div class="ms-panel" id="msPanel">
-        <div class="ms-header">
-          <span class="ms-header-txt">비교 열 선택</span>
-          <span class="ms-all-btn" id="msAllBtn">전체 선택</span>
-        </div>
-        <div id="msItems"></div>
-      </div>
-    </div>
+    <span class="setup-auto-badge" id="categoryAutoBadge" style="display:none"></span>
   </div>
 
   <div class="setup-item" style="padding-bottom:1px">
@@ -413,7 +443,6 @@ let dataRows = [];
 let analysisResult = null; // Map<tgtColName, { issues, tgtColIdx, summary }>
 let badSet = null;         // Map<rowIdx, Set<tgtColIdx>>
 let resultMap = null;      // Map<rowIdx, Map<tgtColIdx, string[]>>
-let msAllState = false;
 
 const PRIORITY_HEADER_HINTS = [/^우선순위$/i, /^priority$/i, /우선순위/i, /priority/i];
 const CATEGORY_HEADER_HINTS = [/^분류$/i, /^category$/i, /^type$/i, /분류/i, /category/i, /type/i];
@@ -681,10 +710,13 @@ function getExcludedColIdxSet() {
 }
 
 function getTgtColIdxArr() {
+  const val = $('tgtColSelect').value;
+  if (!val) return [];
+  const idx = parseInt(val, 10);
+  if (isNaN(idx)) return [];
   const excluded = getExcludedColIdxSet();
-  return [...$('msItems').querySelectorAll('.ms-item.on')]
-    .map(el => parseInt(el.dataset.idx, 10))
-    .filter(idx => !excluded.has(idx));
+  if (excluded.has(idx)) return [];
+  return [idx];
 }
 
 function prepareRows(rows, srcColIdx, priorityColIdx, categoryColIdx, tgtColIdxArr) {
@@ -1177,6 +1209,21 @@ function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, priorityColI
   };
 }
 
+function showLoadingOverlay() {
+  setProgress(0);
+  $('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoadingOverlay() {
+  $('loadingOverlay').style.display = 'none';
+}
+
+function setProgress(pct) {
+  const c = 314.16;
+  $('ringProgress').style.strokeDashoffset = c - (pct / 100) * c;
+  $('ringPercent').textContent = Math.round(pct) + '%';
+}
+
 let dragCounter = 0;
 
 document.addEventListener('dragenter', e => {
@@ -1212,49 +1259,76 @@ $('fileInput').addEventListener('change', e => {
 });
 
 function loadFile(file) {
+  showLoadingOverlay();
   const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      if (!raw.length) {
-        alert('데이터가 없습니다.');
-        return;
-      }
-
-      const maxCols = Math.max(...raw.map(r => r.length), 0);
-      headers = raw[0].map((h, i) => cellStr(h) || `열${i + 1}`);
-      while (headers.length < maxCols) headers.push(`열${headers.length + 1}`);
-
-      dataRows = raw.slice(1).map(r => {
-        const p = [...r];
-        while (p.length < headers.length) p.push('');
-        return p;
-      });
-
-      $('fileNameBadge').textContent = file.name;
-      $('statRows').style.display = '';
-      $('statRowsText').textContent = `${dataRows.length}행`;
-      $('setupArea').classList.remove('hidden');
-      $('analyzeBtn').disabled = false;
-
-      populateColumnSelectors();
-
-      analysisResult = null;
-      badSet = null;
-      resultMap = null;
-
-      $('statIssue').textContent = '불일치 0';
-      $('downloadBtn').disabled = true;
-      $('emptyState').style.display = '';
-      $('issueArea').style.display = 'none';
-      $('issueArea').innerHTML = '';
-    } catch (err) {
-      alert('파일을 읽지 못했습니다: ' + err.message);
+  reader.onprogress = ev => {
+    if (ev.lengthComputable) {
+      setProgress(Math.round((ev.loaded / ev.total) * 60));
     }
   };
+
+  reader.onload = ev => {
+    setProgress(65);
+    // Yield to browser so progress bar renders before heavy XLSX parse
+    setTimeout(() => {
+      try {
+        const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        setProgress(82);
+
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        setProgress(88);
+
+        if (!raw.length) {
+          hideLoadingOverlay();
+          alert('데이터가 없습니다.');
+          return;
+        }
+
+        const maxCols = Math.max(...raw.map(r => r.length), 0);
+        headers = raw[0].map((h, i) => cellStr(h) || `열${i + 1}`);
+        while (headers.length < maxCols) headers.push(`열${headers.length + 1}`);
+
+        dataRows = raw.slice(1).map(r => {
+          const p = [...r];
+          while (p.length < headers.length) p.push('');
+          return p;
+        });
+        setProgress(93);
+
+        $('fileNameBadge').textContent = file.name;
+        $('statRows').style.display = '';
+        $('statRowsText').textContent = `${dataRows.length}행`;
+        $('setupArea').classList.remove('hidden');
+        $('analyzeBtn').disabled = false;
+
+        populateColumnSelectors();
+
+        analysisResult = null;
+        badSet = null;
+        resultMap = null;
+
+        $('statIssue').textContent = '불일치 0';
+        $('downloadBtn').disabled = true;
+        $('emptyState').style.display = '';
+        $('issueArea').style.display = 'none';
+        $('issueArea').innerHTML = '';
+
+        setProgress(100);
+        setTimeout(() => hideLoadingOverlay(), 350);
+      } catch (err) {
+        hideLoadingOverlay();
+        alert('파일을 읽지 못했습니다: ' + err.message);
+      }
+    }, 16);
+  };
+
+  reader.onerror = () => {
+    hideLoadingOverlay();
+    alert('파일 읽기 오류가 발생했습니다.');
+  };
+
   reader.readAsArrayBuffer(file);
 }
 
@@ -1265,6 +1339,7 @@ function populateColumnSelectors() {
   let defaultSrc = headers.findIndex((_, i) => i !== priDetected && i !== catDetected);
   if (defaultSrc < 0) defaultSrc = 0;
 
+  // Source column
   const srcSel = $('srcColSelect');
   srcSel.innerHTML = '';
   headers.forEach((h, i) => {
@@ -1275,6 +1350,7 @@ function populateColumnSelectors() {
   });
   srcSel.value = String(defaultSrc);
 
+  // Priority column
   const priSel = $('priorityColSelect');
   priSel.innerHTML = '<option value="">사용 안 함</option>';
   headers.forEach((h, i) => {
@@ -1283,8 +1359,16 @@ function populateColumnSelectors() {
     opt.textContent = h;
     priSel.appendChild(opt);
   });
-  if (priDetected >= 0) priSel.value = String(priDetected);
+  const priBadge = $('priorityAutoBadge');
+  if (priDetected >= 0) {
+    priSel.value = String(priDetected);
+    priBadge.textContent = `자동 감지: ${headers[priDetected]}`;
+    priBadge.style.display = '';
+  } else {
+    priBadge.style.display = 'none';
+  }
 
+  // Category column
   const catSel = $('categoryColSelect');
   catSel.innerHTML = '<option value="">사용 안 함</option>';
   headers.forEach((h, i) => {
@@ -1293,103 +1377,56 @@ function populateColumnSelectors() {
     opt.textContent = h;
     catSel.appendChild(opt);
   });
-  if (catDetected >= 0) catSel.value = String(catDetected);
-
-  const msItems = $('msItems');
-  msItems.innerHTML = '';
-  headers.forEach((h, i) => {
-    const item = document.createElement('div');
-    item.className = 'ms-item';
-    item.dataset.idx = i;
-    item.innerHTML = `<span class="ms-check"></span><span class="ms-name">${escHtml(h)}</span>`;
-    item.addEventListener('click', () => {
-      if (item.classList.contains('disabled')) return;
-      item.classList.toggle('on');
-      item.querySelector('.ms-check').textContent = item.classList.contains('on') ? '✓' : '';
-      syncMsAllState();
-      updateMsBtnLabel();
-    });
-    msItems.appendChild(item);
-  });
-
-  msAllState = false;
-  $('msAllBtn').textContent = '전체 선택';
-  refreshMsDisabledStates();
-  updateMsBtnLabel();
-}
-
-function refreshMsDisabledStates() {
-  const excluded = getExcludedColIdxSet();
-  $('msItems').querySelectorAll('.ms-item').forEach(item => {
-    const idx = parseInt(item.dataset.idx, 10);
-    const disabled = excluded.has(idx);
-    item.classList.toggle('disabled', disabled);
-    if (disabled) {
-      item.classList.remove('on');
-      item.querySelector('.ms-check').textContent = '';
-    }
-  });
-  syncMsAllState();
-  updateMsBtnLabel();
-}
-
-function updateMsBtnLabel() {
-  const selected = [...$('msItems').querySelectorAll('.ms-item.on')];
-  const label = $('msBtnLabel');
-
-  if (!selected.length) {
-    label.textContent = '열을 선택하세요';
-    $('msBtn').style.color = 'var(--muted)';
-  } else if (selected.length === 1) {
-    label.textContent = selected[0].querySelector('.ms-name').textContent;
-    $('msBtn').style.color = 'var(--warn)';
+  const catBadge = $('categoryAutoBadge');
+  if (catDetected >= 0) {
+    catSel.value = String(catDetected);
+    catBadge.textContent = `자동 감지: ${headers[catDetected]}`;
+    catBadge.style.display = '';
   } else {
-    label.textContent = `${selected.length}개 열 선택됨`;
-    $('msBtn').style.color = 'var(--warn)';
+    catBadge.style.display = 'none';
   }
+
+  // Target column (single select)
+  const tgtSel = $('tgtColSelect');
+  tgtSel.innerHTML = '<option value="">열을 선택하세요</option>';
+  headers.forEach((h, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = h;
+    tgtSel.appendChild(opt);
+  });
+
+  refreshTgtSelectState();
 }
 
-function syncMsAllState() {
-  const items = [...$('msItems').querySelectorAll('.ms-item:not(.disabled)')];
-  const onItems = items.filter(item => item.classList.contains('on'));
-  msAllState = items.length > 0 && onItems.length === items.length;
-  $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
-}
+function refreshTgtSelectState() {
+  const excluded = getExcludedColIdxSet();
+  const tgtSel = $('tgtColSelect');
+  const currentVal = tgtSel.value;
 
-$('srcColSelect').addEventListener('change', refreshMsDisabledStates);
-$('priorityColSelect').addEventListener('change', refreshMsDisabledStates);
-$('categoryColSelect').addEventListener('change', refreshMsDisabledStates);
-
-$('msBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  const open = $('msPanel').classList.toggle('open');
-  $('msBtn').classList.toggle('open', open);
-});
-
-document.addEventListener('click', e => {
-  if (!$('msWrap').contains(e.target)) {
-    $('msPanel').classList.remove('open');
-    $('msBtn').classList.remove('open');
-  }
-});
-
-$('msAllBtn').addEventListener('click', () => {
-  msAllState = !msAllState;
-  $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
-
-  $('msItems').querySelectorAll('.ms-item').forEach(item => {
-    if (item.classList.contains('disabled')) return;
-    if (msAllState) {
-      item.classList.add('on');
-      item.querySelector('.ms-check').textContent = '✓';
-    } else {
-      item.classList.remove('on');
-      item.querySelector('.ms-check').textContent = '';
+  Array.from(tgtSel.options).forEach(opt => {
+    if (opt.value === '') return;
+    const idx = parseInt(opt.value, 10);
+    opt.disabled = excluded.has(idx);
+    if (excluded.has(idx) && currentVal === opt.value) {
+      tgtSel.value = '';
     }
   });
 
-  updateMsBtnLabel();
-});
+  // Auto-select first non-excluded column if nothing selected
+  if (!tgtSel.value) {
+    for (let i = 0; i < headers.length; i++) {
+      if (!excluded.has(i)) {
+        tgtSel.value = String(i);
+        break;
+      }
+    }
+  }
+}
+
+$('srcColSelect').addEventListener('change', refreshTgtSelectState);
+$('priorityColSelect').addEventListener('change', refreshTgtSelectState);
+$('categoryColSelect').addEventListener('change', refreshTgtSelectState);
 
 $('analyzeBtn').addEventListener('click', doAnalyze);
 
