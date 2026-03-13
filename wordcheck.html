@@ -724,8 +724,17 @@ function containsComparable(sentenceNorm, termNorm) {
 function termContainedIn(termNorm, containerNorm) {
   if (!termNorm || !containerNorm) return false;
   if (/[a-z]/i.test(termNorm)) {
-    const cSet = new Set(containerNorm.split(/\s+/).filter(Boolean));
-    return termNorm.split(/\s+/).filter(Boolean).every(t => cSet.has(t));
+    const cTokens = containerNorm.split(/\s+/).filter(Boolean);
+    const cSet = new Set(cTokens);
+    return termNorm.split(/\s+/).filter(Boolean).every(t => {
+      if (cSet.has(t)) return true;
+      // 하이픈 복합어(Mönch-Klasse) 또는 소유격(Jaycee's) 처리
+      return cTokens.some(ct => {
+        if (!ct.startsWith(t) || ct.length === t.length) return false;
+        const next = ct[t.length];
+        return next === '-' || next === "'" || next === '\u2019' || next === '.';
+      });
+    });
   }
   const termC = termNorm.replace(/\s+/g, '');
   const contC = containerNorm.replace(/\s+/g, '');
