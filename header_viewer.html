@@ -10,6 +10,24 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
+      --bg:        #f5f6fa;
+      --surface:   #ffffff;
+      --surface2:  #e5e7eb;
+      --border:    #d1d5db;
+      --border2:   #c0c4cc;
+      --text:      #1a1a2e;
+      --muted:     #6b7280;
+      --accent:    #6366f1;
+      --accent-lt: #818cf8;
+      --accent-bg: rgba(99,102,241,.08);
+      --green:     #16a34a;
+      --green-bg:  rgba(22,163,74,.08);
+      --yellow:    #ca8a04;
+      --red:       #dc2626;
+      --red-bg:    rgba(220,38,38,.06);
+    }
+
+    [data-theme="dark"] {
       --bg:        #0d1117;
       --surface:   #161b22;
       --surface2:  #21262d;
@@ -26,6 +44,24 @@
       --red:       #f85149;
       --red-bg:    rgba(248,81,73,.1);
     }
+
+    /* Light-mode overrides for hardcoded dark colors */
+    .app-header { background: rgba(255,255,255,0.85); }
+    [data-theme="dark"] .app-header { background: rgba(22,27,34,.85); }
+
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      margin-left: auto;
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border2); background: var(--surface2);
+      cursor: pointer; font-size: 16px; transition: .15s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.4); }
 
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -340,6 +376,7 @@
   <div class="logo">📊</div>
   <span class="app-title">ZIP Excel Header Viewer</span>
   <span class="app-sub">압축 파일 내 엑셀 헤더 뷰어</span>
+  <button class="theme-toggle" id="themeToggle" title="다크 모드 전환">☀️</button>
 </header>
 
 <main>
@@ -825,6 +862,29 @@ function hl(text, q) {
 
 const tick  = () => new Promise(r => setTimeout(r, 0));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+</script>
+<script>
+(function(){
+  const toggle = document.getElementById('themeToggle');
+  const key = 'theme-preference';
+  const saved = localStorage.getItem(key);
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    toggle.textContent = '🌙';
+  }
+  toggle.addEventListener('click', function(){
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      document.documentElement.removeAttribute('data-theme');
+      toggle.textContent = '☀️';
+      localStorage.setItem(key, 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      toggle.textContent = '🌙';
+      localStorage.setItem(key, 'dark');
+    }
+  });
+})();
 </script>
 </body>
 </html>
