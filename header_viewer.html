@@ -45,24 +45,6 @@
       --red-bg:    rgba(248,81,73,.1);
     }
 
-    /* Light-mode overrides for hardcoded dark colors */
-    .app-header { background: rgba(255,255,255,0.85); }
-    [data-theme="dark"] .app-header { background: rgba(22,27,34,.85); }
-
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--border2); }
-
-    /* Theme toggle button */
-    .theme-toggle {
-      margin-left: auto;
-      display: flex; align-items: center; justify-content: center;
-      width: 34px; height: 34px; border-radius: 8px;
-      border: 1px solid var(--border2); background: var(--surface2);
-      cursor: pointer; font-size: 16px; transition: .15s;
-      flex-shrink: 0;
-    }
-    .theme-toggle:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.4); }
-
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
@@ -86,7 +68,7 @@
       font-size: 17px; flex-shrink: 0;
     }
     .app-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
-    .app-sub   { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .app-sub   { font-size: 12px; color: var(--muted); }
 
     /* ── Main ── */
     main {
@@ -368,6 +350,66 @@
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── Theme toggle button ── */
+    .theme-toggle {
+      display: flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border2); background: var(--surface2);
+      cursor: pointer; font-size: 16px; transition: .15s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.4); }
+
+    /* ── Light theme overrides (placed last to win specificity) ── */
+    :root .app-header { background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); }
+    :root #drop-zone { background: var(--surface); }
+    :root #drop-zone.drag-over { border-color: var(--accent); background: var(--accent-bg); }
+    :root #drop-zone.has-file { border-color: var(--green); background: var(--green-bg); }
+    :root .stat-pill { background: var(--surface); }
+    :root #search { background: var(--surface); }
+    :root .file-card { background: var(--surface); }
+    :root .card-header:hover { background: var(--surface2); }
+    :root .h-chip { background: var(--surface); }
+    :root .h-chip:hover { border-color: var(--accent); background: var(--accent-bg); }
+    :root .progress-bar { background: var(--surface2); }
+
+    /* Light text colors */
+    :root .locale-ok { background: rgba(22,163,74,0.1); color: #15803d; border-color: rgba(22,163,74,0.3); }
+    :root .locale-delta { background: rgba(202,138,4,0.1); color: #a16207; border-color: rgba(202,138,4,0.3); }
+    :root .locale-fail { background: rgba(220,38,38,0.1); color: #b91c1c; border-color: rgba(220,38,38,0.3); }
+    :root .detail-row.row-fail { background: rgba(220,38,38,0.05); border-color: rgba(220,38,38,0.15); }
+    :root .detail-row.row-delta { background: rgba(202,138,4,0.05); border-color: rgba(202,138,4,0.15); }
+    :root .mm-exp { color: #15803d; }
+    :root .mm-got { color: #b91c1c; }
+    :root .mm-extra { color: #a16207; }
+    :root .mm-extra code { background: rgba(202,138,4,0.1); }
+    :root .error-box { color: var(--red); background: var(--red-bg); border-color: rgba(220,38,38,0.2); }
+    :root .badge-sheet { background: var(--accent-bg); color: var(--accent); }
+    :root .badge-err { background: var(--red-bg); color: var(--red); }
+    :root .reset-btn:hover { border-color: var(--red); color: var(--red); }
+    :root .expand-all-btn:hover { border-color: var(--accent); color: var(--accent); }
+    :root .col-count { background: var(--surface2); }
+
+    /* ── Dark theme restores ── */
+    [data-theme="dark"] .app-header { background: rgba(22,27,34,.85); }
+    [data-theme="dark"] #drop-zone { background: #161b22; }
+    [data-theme="dark"] .stat-pill { background: #161b22; }
+    [data-theme="dark"] #search { background: #161b22; }
+    [data-theme="dark"] .file-card { background: #161b22; }
+    [data-theme="dark"] .card-header:hover { background: #21262d; }
+    [data-theme="dark"] .h-chip { background: #0d1117; }
+    [data-theme="dark"] .progress-bar { background: #21262d; }
+    [data-theme="dark"] .locale-ok { background: rgba(63,185,80,.15); color: #3fb950; border-color: rgba(63,185,80,.35); }
+    [data-theme="dark"] .locale-delta { background: rgba(210,153,34,.15); color: #d29922; border-color: rgba(210,153,34,.4); }
+    [data-theme="dark"] .locale-fail { background: rgba(248,81,73,.15); color: #f85149; border-color: rgba(248,81,73,.35); }
+    [data-theme="dark"] .detail-row.row-fail { background: rgba(248,81,73,.07); border-color: rgba(248,81,73,.2); }
+    [data-theme="dark"] .detail-row.row-delta { background: rgba(210,153,34,.07); border-color: rgba(210,153,34,.2); }
+    [data-theme="dark"] .mm-exp { color: #3fb950; }
+    [data-theme="dark"] .mm-got { color: #f85149; }
+    [data-theme="dark"] .mm-extra { color: #d29922; }
+    [data-theme="dark"] .mm-extra code { background: rgba(210,153,34,.12); }
+    [data-theme="dark"] .col-count { background: #21262d; }
   </style>
 </head>
 <body>
@@ -400,7 +442,7 @@
     <div class="stat-pill">📁 파일 <b id="s-files">0</b>개</div>
     <div class="stat-pill">🗂 시트 <b id="s-sheets">0</b>개</div>
     <div class="stat-pill">🔤 컬럼 <b id="s-cols">0</b>개</div>
-    <div class="stat-pill">✔ <b id="s-ok" style="color:#3fb950">0</b> &nbsp;△ <b id="s-delta" style="color:#d29922">0</b> &nbsp;✘ <b id="s-fail" style="color:#f85149">0</b></div>
+    <div class="stat-pill">✔ <b id="s-ok" class="mm-exp">0</b> &nbsp;△ <b id="s-delta" class="mm-extra">0</b> &nbsp;✘ <b id="s-fail" class="mm-got">0</b></div>
     <div class="search-wrap">
       <span class="icon">🔍</span>
       <input id="search" type="text" placeholder="파일명, 시트명, 컬럼명으로 검색…" autocomplete="off" />
