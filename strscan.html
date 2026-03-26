@@ -6,6 +6,19 @@
   <title>문자열 탐지</title>
   <style>
     :root {
+      --bg: #f5f6fa;
+      --surface: rgba(0,0,0,0.02);
+      --surface2: rgba(0,0,0,0.04);
+      --border: rgba(0,0,0,0.08);
+      --border2: rgba(0,0,0,0.14);
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --accent: #6366f1;
+      --lang: #d97706;
+      --ok: #16a34a;
+    }
+
+    [data-theme="dark"] {
       --bg: #0d1117;
       --surface: rgba(255,255,255,0.03);
       --surface2: rgba(255,255,255,0.06);
@@ -17,6 +30,64 @@
       --lang: #ffa657;
       --ok: #3fb950;
     }
+
+    /* Light-mode overrides for hardcoded dark colors */
+    .nav { background: rgba(255,255,255,0.94); }
+    [data-theme="dark"] .nav { background: rgba(13,17,23,0.94); }
+
+    .toolbar { background: rgba(0,0,0,0.015); }
+    [data-theme="dark"] .toolbar { background: rgba(255,255,255,0.015); }
+
+    .card-head { background: rgba(0,0,0,0.015); }
+    [data-theme="dark"] .card-head { background: rgba(255,255,255,0.015); }
+
+    textarea { background: rgba(0,0,0,0.03); }
+    [data-theme="dark"] textarea { background: rgba(0,0,0,0.12); }
+
+    .col-selector select { background: rgba(0,0,0,0.05); }
+    [data-theme="dark"] .col-selector select { background: rgba(0,0,0,0.3); }
+
+    #excludeInput { background: rgba(0,0,0,0.03); }
+    [data-theme="dark"] #excludeInput { background: rgba(0,0,0,0.2); }
+
+    .sc-label { background: rgba(0,0,0,0.03); }
+    [data-theme="dark"] .sc-label { background: rgba(0,0,0,0.12); }
+
+    thead th { background: rgba(255,255,255,0.98); }
+    [data-theme="dark"] thead th { background: rgba(13,17,23,0.98); }
+
+    tbody tr:hover td { background: rgba(0,0,0,0.02); }
+    [data-theme="dark"] tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+    tbody td { border-bottom-color: rgba(0,0,0,0.06); }
+    [data-theme="dark"] tbody td { border-bottom-color: rgba(255,255,255,0.04); }
+
+    .chunk-input { background: rgba(0,0,0,0.03); }
+    [data-theme="dark"] .chunk-input { background: rgba(0,0,0,0.25); }
+
+    [data-tip]::after {
+      background: rgba(255,255,255,0.97);
+      border-color: rgba(0,0,0,0.12);
+      color: rgba(30,30,50,0.92);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    [data-theme="dark"] [data-tip]::after {
+      background: rgba(10,14,22,0.97);
+      border-color: rgba(255,255,255,0.12);
+      color: rgba(230,237,243,0.92);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      margin-left: auto;
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid var(--border2); background: var(--surface2);
+      cursor: pointer; font-size: 16px; transition: .15s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.4); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
@@ -350,6 +421,7 @@
   <a href="strscan.html" data-page="strscan.html">문자열 탐지</a>
   <a href="placeholder.html" data-page="placeholder.html">플레이스홀더</a>
   <a href="wordcheck.html" data-page="wordcheck.html">단어 일치 검수</a>
+  <button class="theme-toggle" id="themeToggle" title="다크 모드 전환">☀️</button>
 </nav>
 
 <!-- TOOLBAR -->
@@ -1286,6 +1358,29 @@ document.querySelectorAll(".nav a[data-page]").forEach(a => {
 
 // ── INIT ──
 buildScriptGroupsUI();
+</script>
+<script>
+(function(){
+  const toggle = document.getElementById('themeToggle');
+  const key = 'theme-preference';
+  const saved = localStorage.getItem(key);
+  if (saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    toggle.textContent = '🌙';
+  }
+  toggle.addEventListener('click', function(){
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      document.documentElement.removeAttribute('data-theme');
+      toggle.textContent = '☀️';
+      localStorage.setItem(key, 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      toggle.textContent = '🌙';
+      localStorage.setItem(key, 'dark');
+    }
+  });
+})();
 </script>
 </body>
 </html>
